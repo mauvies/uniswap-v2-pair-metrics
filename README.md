@@ -22,4 +22,9 @@ Packages are added in the commits that introduce them.
 Node 22+ (24 recommended, see `.nvmrc`), pnpm 10, Docker for Postgres, and a
 [The Graph gateway API key](https://thegraph.com/studio/apikeys/).
 
-Run instructions, the data model, and design decisions land with the code they describe.
+## Docs
+
+- [`docs/DESIGN.md`](docs/DESIGN.md) — hypotheses, the APR formula and its derivation, the
+  data model, the API contract, failure handling, and what was considered and rejected.
+
+Run instructions land with the code they describe.
