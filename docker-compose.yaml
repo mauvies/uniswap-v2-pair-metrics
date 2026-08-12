@@ -1,0 +1,30 @@
+name: uniswap-v2-pair-metrics
+
+services:
+  db:
+    # Pinned to a major; nothing here needs a newer Postgres.
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      # Local development credentials, not secrets: the port is bound to
+      # localhost and the database holds public subgraph data. A deployment
+      # supplies these through the environment instead.
+      POSTGRES_USER: ${POSTGRES_USER:-uniswap}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-uniswap}
+      POSTGRES_DB: ${POSTGRES_DB:-uniswap_v2_pair_metrics}
+    ports:
+      # Overridable so it does not collide with a Postgres already on 5432.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      # Services added later gate on this with `condition: service_healthy`,
+      # so ingest never opens a connection before the server accepts them.
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-uniswap} -d ${POSTGRES_DB:-uniswap_v2_pair_metrics}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  db-data:

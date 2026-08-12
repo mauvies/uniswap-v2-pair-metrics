@@ -56,10 +56,13 @@ was rejected and why — read it before adding a dependency.
 ## Commands
 
 ```
-pnpm check       # Biome: lint and format
+pnpm check              # Biome: lint and format
 pnpm typecheck
 pnpm test
 pnpm build
+
+docker compose up -d db # Postgres 17, localhost:5432
+docker compose down     # add -v to drop the volume
 ```
 
 Run instructions for the services land with the packages that introduce them.

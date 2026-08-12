@@ -22,9 +22,20 @@ Packages are added in the commits that introduce them.
 Node 22+ (24 recommended, see `.nvmrc`), pnpm 10, Docker for Postgres, and a
 [The Graph gateway API key](https://thegraph.com/studio/apikeys/).
 
+## Database
+
+```sh
+docker compose up -d db     # Postgres 17 on localhost:5432
+docker compose down         # stop; add -v to drop the data too
+```
+
+Credentials default to `uniswap` / `uniswap` / `uniswap_v2_pair_metrics` and are local only.
+Override `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` or `POSTGRES_PORT` in a `.env`
+file if 5432 is already taken or you want different values.
+
 ## Docs
 
 - [`docs/DESIGN.md`](docs/DESIGN.md) — hypotheses, the APR formula and its derivation, the
   data model, the API contract, failure handling, and what was considered and rejected.
 
-Run instructions land with the code they describe.
+Run instructions for the services land with the code they describe.
