@@ -12,6 +12,27 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+
+    # Same image and credentials as docker-compose.yaml, so a test meets the same database
+    # here as it does locally.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: uniswap
+          POSTGRES_PASSWORD: uniswap
+          POSTGRES_DB: uniswap_v2_pair_metrics
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://uniswap:uniswap@localhost:5432/uniswap_v2_pair_metrics
+
     steps:
       - uses: actions/checkout@v4
 
@@ -27,11 +48,11 @@ jobs:
       - name: Lint and format
         run: pnpm check
 
-      # Here from the start so no later commit can be the first to introduce a
-      # type error or broken test unnoticed. Both fan out with `pnpm -r
-      # --if-present`, so they exit 0 until the first package lands.
       - name: Typecheck
         run: pnpm typecheck
+
+      - name: Migrate
+        run: pnpm db:migrate
 
       - name: Test
         run: pnpm test
