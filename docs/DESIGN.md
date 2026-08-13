@@ -161,13 +161,17 @@ esbuild for the API's container image, Vite for the web app — so `tsc` is a ty
 everywhere in this repo and never a build step. That is what keeps build ordering out of a
 workspace with no orchestrator: no package has to be built before another can compile.
 
-Verified on 2026-08-12 by bundling a package that imports `shared` by name: 2.8 kB of
-self-contained ESM, no external dependencies, runs on plain Node.
+Verified on 2026-08-13 by bundling a package that imports `shared` by name: 1.4 kB of
+self-contained ESM, no external dependencies, runs on plain Node. The drizzle schema is
+reached through a `./schema` subpath rather than the barrel, because a top-level
+`pgTable(...)` call cannot be proven side-effect-free: re-exporting it pinned 74 kB of
+column builders into every consumer, including the browser bundle `web` will produce.
 
 **Node 24 or newer, and the version is load-bearing.** Native type stripping runs `.ts`
-files with no transpiler, which is why there is no `tsx`. It also means an older runtime
-fails at the first import rather than at install, so `engine-strict` turns that into an
-error `pnpm install` can explain.
+files with no transpiler, so no application code is transpiled and there is no `tsx`
+dependency of ours — `drizzle-kit` bundles one to read its own config, which runs only at
+migration time. An older runtime fails at the first import rather than at install, so
+`engine-strict` turns that into an error `pnpm install` can explain.
 
 **APR is computed in JS, in `shared`, not in SQL.** Window functions get awkward once the
 series has gaps, and a pure function can be tested against hand-computed fixtures.
@@ -194,7 +198,7 @@ CREATE TABLE pair_hour_metrics (
   volume_token0   numeric  NOT NULL,
   volume_token1   numeric  NOT NULL,
   volume_usd      numeric  NOT NULL,
-  fees_usd        numeric  GENERATED ALWAYS AS (volume_usd * 0.003) STORED,
+  fees_usd        numeric  GENERATED ALWAYS AS (volume_usd * 0.003) STORED NOT NULL,
   hourly_txns     bigint   NOT NULL,
   ingested_at     timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (pair_address, hour_start_unix)
@@ -213,7 +217,17 @@ CREATE TABLE pair_hour_metrics (
 - **`fees_usd` is generated.** The exercise asks for fees to be stored; deriving them in the
   schema satisfies that while making drift from `volume_usd` impossible, and the derivation
   is visible in the migration. The trade-off is that §2.1 is a hypothesis cemented in DDL:
-  revising the rate means a migration, not a constant.
+  revising the rate means a migration, not a constant. The rate itself is rendered into the
+  DDL from `FEE_RATE`, so it has one home in source; a test asserts the committed migration
+  still matches it, since regenerating is a manual step nothing else would catch.
+- **The numeric columns carry no value constraints, deliberately.** `NUMERIC` accepts
+  `'NaN'` and `'Infinity'`, and since NaN sorts above every number the obvious `>= 0`
+  rejects neither, so a constraint that looked sufficient would not be. But that argues the
+  validation must be complete, not that it belongs here: the zod schema at the fetch
+  boundary (§5.4) is what rejects a malformed field, and it names the field in the error
+  instead of surfacing as a constraint violation inside a transaction. Duplicating it in
+  DDL would say we do not trust our own boundary. The alignment `CHECK` above is a
+  different thing — a structural invariant of the primary key, true of any write.
 - **Volume is stored twice, in coins and in USD.** The exercise's introduction describes all
   three metrics in coins; requirement 1 names them with no unit at all. APR needs a common
   monetary unit — fees in one token cannot be divided by reserves in another — so the
@@ -290,7 +304,10 @@ heals itself.
 ### 5.4 Subgraph client — decided
 
 **No GraphQL client.** `fetch` plus a zod schema at the boundary, so a renamed or nulled
-field surfaces as an error instead of a `NaN` reaching the chart.
+field surfaces as an error instead of a `NaN` reaching the chart. Every `BigDecimal` is
+checked to parse as a finite, non-negative decimal — `'NaN'` and `'Infinity'` are values
+`NUMERIC` would accept downstream, and rows are immutable (§5.1), so anything admitted here
+is permanent. This is the only place that validation lives; §4 says why not in DDL too.
 
 **No retry library.** The loop is a dozen lines; the interesting part is the classification,
 which is specific to this gateway (§8).

@@ -3,8 +3,8 @@
 Hourly liquidity, volume and fee snapshots for two Uniswap v2 pairs on Ethereum mainnet,
 served over HTTP and plotted as APR in a React dashboard.
 
-Data comes from the Uniswap v2 **subgraph**, not from chain scanning — the indexer absorbs
-reorgs, so there is no RPC client and no confirmation depth here.
+Data comes from the Uniswap v2 **subgraph**, not from chain scanning — so there is no RPC
+client, no log decoding and no confirmation depth here.
 
 ## Layout
 
@@ -29,14 +29,20 @@ rather than letting it surface later as a confusing parse error.
 
 ## Database
 
+Set `POSTGRES_PORT` in a `.env` file first if 5432 is already taken — both commands below
+read it.
+
 ```sh
-docker compose up -d db     # Postgres 17 on localhost:5432
-docker compose down         # stop; add -v to drop the data too
+docker compose up -d db    # Postgres 17, localhost:5432
+pnpm db:migrate            # create the schema
+docker compose down        # add -v to drop the data too
 ```
 
+Changing `packages/shared/src/schema.ts` means regenerating the migration with
+`pnpm db:generate` and committing the `.sql` alongside it.
+
 Credentials default to `uniswap` / `uniswap` / `uniswap_v2_pair_metrics` and are local only.
-Override `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` or `POSTGRES_PORT` in a `.env`
-file if 5432 is already taken or you want different values.
+`POSTGRES_USER`, `POSTGRES_PASSWORD` and `POSTGRES_DB` override them the same way.
 
 ## Docs
 

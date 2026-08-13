@@ -10,6 +10,8 @@
   "packageManager": "pnpm@10.30.3",
   "scripts": {
     "build": "pnpm -r --if-present build",
+    "db:generate": "pnpm --filter @uniswap-v2-pair-metrics/shared db:generate",
+    "db:migrate": "pnpm --filter @uniswap-v2-pair-metrics/shared db:migrate",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",
     "check": "biome check .",

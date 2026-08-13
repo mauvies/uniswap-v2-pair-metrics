@@ -1,0 +1,116 @@
+{
+  "id": "bfb55313-1704-42b9-8e6b-59c50b57b87d",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.pair_hour_metrics": {
+      "name": "pair_hour_metrics",
+      "schema": "",
+      "columns": {
+        "pair_address": {
+          "name": "pair_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hour_start_unix": {
+          "name": "hour_start_unix",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reserve0": {
+          "name": "reserve0",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reserve1": {
+          "name": "reserve1",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reserve_usd": {
+          "name": "reserve_usd",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "volume_token0": {
+          "name": "volume_token0",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "volume_token1": {
+          "name": "volume_token1",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "volume_usd": {
+          "name": "volume_usd",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fees_usd": {
+          "name": "fees_usd",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "generated": {
+            "as": "volume_usd * 0.003",
+            "type": "stored"
+          }
+        },
+        "hourly_txns": {
+          "name": "hourly_txns",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ingested_at": {
+          "name": "ingested_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "pair_hour_metrics_pair_address_hour_start_unix_pk": {
+          "name": "pair_hour_metrics_pair_address_hour_start_unix_pk",
+          "columns": [
+            "pair_address",
+            "hour_start_unix"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "hour_start_unix_aligned": {
+          "name": "hour_start_unix_aligned",
+          "value": "\"pair_hour_metrics\".\"hour_start_unix\" > 0 AND \"pair_hour_metrics\".\"hour_start_unix\" % 3600 = 0"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

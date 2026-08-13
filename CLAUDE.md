@@ -85,6 +85,7 @@ pnpm build
 
 docker compose up -d db # Postgres 17, localhost:5432
 docker compose down     # add -v to drop the volume
+pnpm db:migrate         # apply migrations; db:generate after editing schema.ts
 ```
 
 Run instructions for the services land with the packages that introduce them.

@@ -4,14 +4,22 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
+    "drizzle-kit": "^0.31.10",
+    "pg": "^8.23.0",
     "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.2"
   }
 }
