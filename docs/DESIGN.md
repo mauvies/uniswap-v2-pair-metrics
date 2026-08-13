@@ -155,6 +155,20 @@ packages/
 **pnpm workspaces, no build orchestrator** — four packages; caching would not pay for
 itself.
 
+**Nothing compiles across package boundaries.** `shared` is consumed as TypeScript source:
+its `exports` names `src/index.ts` and it emits nothing. Consumers bundle it instead —
+esbuild for the API's container image, Vite for the web app — so `tsc` is a typechecker
+everywhere in this repo and never a build step. That is what keeps build ordering out of a
+workspace with no orchestrator: no package has to be built before another can compile.
+
+Verified on 2026-08-12 by bundling a package that imports `shared` by name: 2.8 kB of
+self-contained ESM, no external dependencies, runs on plain Node.
+
+**Node 24 or newer, and the version is load-bearing.** Native type stripping runs `.ts`
+files with no transpiler, which is why there is no `tsx`. It also means an older runtime
+fails at the first import rather than at install, so `engine-strict` turns that into an
+error `pnpm install` can explain.
+
 **APR is computed in JS, in `shared`, not in SQL.** Window functions get awkward once the
 series has gaps, and a pure function can be tested against hand-computed fixtures.
 

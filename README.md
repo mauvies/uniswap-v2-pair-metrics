@@ -19,8 +19,13 @@ Packages are added in the commits that introduce them.
 
 ## Requirements
 
-Node 22+ (24 recommended, see `.nvmrc`), pnpm 10, Docker for Postgres, and a
+**Node 24 or newer** (`.nvmrc` pins 24), pnpm 10, Docker for Postgres, and a
 [The Graph gateway API key](https://thegraph.com/studio/apikeys/).
+
+Node 24 is a hard requirement, not a preference. TypeScript files run directly on its
+native type stripping, so there is no transpiler in the loop and an older runtime fails at
+the first import. `engine-strict` catches that at `pnpm install` with an explicit message
+rather than letting it surface later as a confusing parse error.
 
 ## Database
 
