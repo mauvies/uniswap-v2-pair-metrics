@@ -7,6 +7,7 @@ import {
   isRetryable,
 } from "./classify.ts";
 import { PAGE_SIZE, REQUEST_TIMEOUT_MS, RETRY_ATTEMPTS } from "./constants.ts";
+import { assertFetchWindow } from "./hours.ts";
 import {
   envelope,
   type Meta,
@@ -155,6 +156,13 @@ export function createGateway(options: GatewayOptions): Gateway {
         query: PAIR_HOURS_QUERY,
         variables: { pair, from, to, first: pageSize },
       });
+
+      // Checked here, where `from` and `to` are in hand, so no caller can forget it.
+      assertFetchWindow(
+        pairHourDatas.map((row) => row.hourStartUnix),
+        from,
+        to,
+      );
 
       return pairHourDatas;
     },

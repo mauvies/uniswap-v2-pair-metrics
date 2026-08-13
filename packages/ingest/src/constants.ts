@@ -11,6 +11,12 @@ export const FINALITY_MARGIN_SECONDS = 900;
 /** The gateway served exactly this many rows for `first: 1000` (§9). */
 export const PAGE_SIZE = 1000;
 
+/** Hours a first run collects (§5.5). */
+export const BACKFILL_HOURS = 48;
+
+/** Above this the indexer is lagging enough to be worth a line in the log (§8). */
+export const LAG_WARN_SECONDS = 600;
+
 /** Attempts per request, and the sleeps between them. */
 export const RETRY_ATTEMPTS = 3;
 export const RETRY_BACKOFF_MS = [250, 500] as const;

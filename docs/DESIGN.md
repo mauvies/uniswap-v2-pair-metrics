@@ -13,8 +13,8 @@ below is marked **verified** (checked against the live gateway, 11–12 August 2
 
 Uniswap v2 on Ethereum mainnet via subgraph `A3Np3RQbaBA6oKJgiwDJeo5T3zrYfGHPWFYayMwtNDum`
 on The Graph's gateway (`POST https://gateway.thegraph.com/api/{key}/subgraphs/id/{id}`).
-Indexed source, not chain scanning: no RPC, no log decoding, no confirmations, no reorg
-handling.
+Indexed source, not chain scanning: no RPC, no log decoding, and no reorg handling of our
+own beyond a finality margin on the ingest bound (§5.2).
 
 Entity `pairHourDatas` (verified):
 
@@ -259,8 +259,9 @@ anyway and mark it partial. We do the opposite: ingest waits, and writes an hour
 it has ended.
 
 That pays off twice. Staleness can then be measured from the end of the last stored hour,
-and "the last stored hour ended over 60 minutes ago" turns out to mean exactly "a new hour
-has finished upstream" — so the guard fires once an hour, just after each boundary. And
+and "the last stored hour ended over 60 minutes ago" turns out to mean "a new hour has
+finished upstream and is old enough to store" — so the guard fires once an hour, shifted
+into the cycle by the finality margin (§5.2) rather than sitting on the boundary. And
 every row we store is final, which is what lets the upsert be `ON CONFLICT DO NOTHING` and
 makes a second run a provable no-op.
 
@@ -278,7 +279,7 @@ cadence, one write per hour just after a new hour becomes available.
 ### 5.2 "Now" is bounded by the indexer — decided
 
 ```
-effectiveNow = min(wall clock, _meta.block.timestamp)
+effectiveNow = min(wall clock, _meta.block.timestamp) − 900
 ```
 
 An hour complete by wall clock may not be fully indexed. Combined with immutable rows,
@@ -286,6 +287,26 @@ ingesting a half-indexed hour would freeze incomplete data permanently. Bounding
 the indexer's head means an hour is ingested only once the indexer has passed its end.
 `_meta` is already fetched per run, so this is free, and it removes host clock skew too. If
 the indexer falls far behind, the run is a logged no-op.
+
+**The 900 seconds are a finality margin**, and they do something the `min` does not. The
+indexer bound says an hour is fully *indexed*; it says nothing about whether the blocks it
+was built from are *final*. Ethereum finalises two epochs back, about 12.8 minutes, and a
+finalised block still has to be indexed — measured lag was 22s and 35s. 15 minutes covers
+both and explains itself. Without it, a reorg in the last minutes of an hour leaves that row
+permanently wrong, because rows are never updated (§5.1).
+
+How much that matters is a property of the pool, not of the method. APR divides fees by
+`reserveUSD`, so a reorg moves numerator and denominator against the size of the pool: $50k
+of swap is noise against USDC/WETH's $17.7M and a quarter of a $200k pool. §9 justifies
+having no pairs table by saying adding a pair is a one-line change, so the guarantee would
+degrade silently the first time someone added an illiquid one.
+
+**The margin is subtracted after the `min`, not before.** That runs the finality test on
+`_meta.block.timestamp` — chain time — rather than on the host clock, which is the same
+reason the bound exists at all. Subtracting from the wall clock instead would let a host
+15 minutes fast write hours with no margin. The cost is that a lagging indexer and the
+margin compound; that only bites in a state already worth warning about, and conservative
+is the right bias when the write cannot be undone. Running without the margin is in §9.
 
 **If the `_meta` query fails, the run aborts.** There is no fallback to the wall clock:
 that would reinstate exactly the corruption this bound exists to prevent, and would do so
@@ -344,14 +365,17 @@ is older than the threshold* — produces every case, with no special branches:
 |---|---|---|
 | First run | empty | Backfill 48h |
 | Run within the hour | 20 min ago | Nothing, exit 0 |
-| Run after a new hour completed | 65 min ago | Ingest that hour |
+| Run after a new hour completed, margin not yet passed | 65 min ago | Nothing, exit 0 |
+| Run once the margin has passed | 75 min ago | Ingest that hour |
 | Run after three days down | 72h ago | Fetch the 72h interval, write the rows it holds |
 | Inactive pair | empty, every run | Query 48h, find nothing, exit 0 |
 
 The 60-minute guard lives inside the process, so frequent invocation is safe — the process
 decides whether there is anything to do. Three invocation modes, one binary: one-shot
 `docker compose run`, an optional scheduler profile, and a documented cron line. Nothing
-sleeps or loops internally.
+sleeps or loops internally. The cron line is `15 * * * *`, not `0 * * * *`: on the hour the
+newest hour has not cleared the margin yet, so every run would find nothing and each write
+would land an hour late.
 
 ---
 
@@ -491,7 +515,7 @@ behaviour.
 | Range starts before enough history exists | 23 hours of lookback before `from`; truncated at `first_stored_hour`, unfillable windows `null` (§2.4) | `lookback window` · `lookback truncated at start of history → nulls` |
 | Range extends past the last ingested hour, so un-ingested hours would be imputed as zero | Reconstruction bounded to `[first_stored, last_stored]`; hours outside are omitted and `range` echoes the resolved interval (§6.1) | `range past last stored hour omits trailing hours, does not impute` |
 | Range wholly outside stored history (asking for January 2024) | Empty intersection: `200` with `range: null`, `points: []` — the same shape the inactive pair returns (§6.1) | `disjoint range → 200, null range, empty points` |
-| Indexer behind chain head, so a wall-clock-complete hour is half-indexed | "Now" bounded by `_meta.block.timestamp` (§5.2); lag over 10 min warns | `lagging indexer bounds upper hour` |
+| Indexer behind chain head, so a wall-clock-complete hour is half-indexed | "Now" bounded by `_meta.block.timestamp` (§5.2); lag over 10 min warns, which is below the 15-minute margin and so an early warning rather than a report of damage | `lagging indexer bounds upper hour` |
 | `_meta` query fails | The classifier retries it like any request; if it still fails the run aborts writing nothing — no wall-clock fallback (§5.2) | `missing _meta aborts the run, writes nothing` |
 | Indexer reports `hasIndexingErrors: true` | Logged as a warning, ingest proceeds — the flag is subgraph-wide, with no per-pair or per-hour resolution to act on | `hasIndexingErrors → warning, run proceeds` |
 | Downtime leaves a hole the API would fill with fabricated zeros | Contiguity invariant (§2.3) | `resume after gap backfills every missing hour` |
@@ -566,6 +590,15 @@ Instead: an explicit `first` and ascending order, so an exceeded limit returns a
 prefix and the next run resumes from the advanced `MAX(hour_start_unix)`. If the window
 grew to weeks, the technique is cursor pagination on `hourStartUnix_gt` with a batched
 upsert per page — the same cursor mechanism the ingest already uses between runs.
+
+**Ingesting at the indexer head, with no finality margin.** Simpler, and the chart's newest
+point would be 15 minutes fresher. Rejected: rows are immutable (§5.1), so an hour built
+from blocks that later reorg stays wrong with no correction path, and the damage scales
+inversely with pool size — negligible on USDC/WETH, a quarter of a small pool. The cost of
+the margin is bounded and invisible at hourly granularity: the newest point appears 15
+minutes after its hour closes instead of seconds after, and the guard still fires once an
+hour, just shifted inside the cycle. Public dashboards do follow the head, but they can
+correct a number afterwards and we cannot.
 
 **`pg_advisory_lock` around runs.** Rejected as redundant: with immutable rows and
 `ON CONFLICT DO NOTHING`, concurrent runs cannot corrupt anything — a claim pinned by §8's

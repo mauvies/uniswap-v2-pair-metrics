@@ -40,6 +40,69 @@ describe("createGateway", () => {
     expect(stub.requests[0]?.query).toContain("orderDirection: asc");
   });
 
+  it("rejects a row outside the window it asked for", async () => {
+    const from = 1786525200;
+    const to = from + 2 * 3600;
+    // The gateway is not asked whether it honoured the filter; this catches our own
+    // query going wrong, which would otherwise store an hour that is still in progress.
+    const stub = alwaysAnswers({
+      data: {
+        pairHourDatas: [
+          {
+            hourStartUnix: 1786532400,
+            reserve0: "1",
+            reserve1: "1",
+            reserveUSD: "1",
+            hourlyVolumeToken0: "0",
+            hourlyVolumeToken1: "0",
+            hourlyVolumeUSD: "0",
+            hourlyTxns: "1",
+          },
+        ],
+      },
+    });
+    const gateway = createGateway({ url: URL, fetch: stub.fetch, sleep });
+
+    await expect(gateway.pairHours("0xb4e1", from, to)).rejects.toThrow(
+      /outside the requested window/,
+    );
+  });
+
+  it("rejects rows that come back out of order", async () => {
+    const from = 1786525200;
+    const stub = alwaysAnswers({
+      data: {
+        pairHourDatas: [
+          {
+            hourStartUnix: 1786528800,
+            reserve0: "1",
+            reserve1: "1",
+            reserveUSD: "1",
+            hourlyVolumeToken0: "0",
+            hourlyVolumeToken1: "0",
+            hourlyVolumeUSD: "0",
+            hourlyTxns: "1",
+          },
+          {
+            hourStartUnix: 1786525200,
+            reserve0: "1",
+            reserve1: "1",
+            reserveUSD: "1",
+            hourlyVolumeToken0: "0",
+            hourlyVolumeToken1: "0",
+            hourlyVolumeUSD: "0",
+            hourlyTxns: "1",
+          },
+        ],
+      },
+    });
+    const gateway = createGateway({ url: URL, fetch: stub.fetch, sleep });
+
+    await expect(gateway.pairHours("0xb4e1", from, from + 3 * 3600)).rejects.toThrow(
+      /not ascending/,
+    );
+  });
+
   it("gives up after the last attempt", async () => {
     const stub = alwaysAnswers({}, 500);
     const gateway = createGateway({ url: URL, fetch: stub.fetch, sleep });
