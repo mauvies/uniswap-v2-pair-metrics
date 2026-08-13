@@ -20,7 +20,8 @@ Packages are added in the commits that introduce them.
 ## Requirements
 
 **Node 24 or newer** (`.nvmrc` pins 24), pnpm 10, Docker for Postgres, and a
-[The Graph gateway API key](https://thegraph.com/studio/apikeys/).
+[The Graph gateway API key](https://thegraph.com/studio/apikeys/). Copy `.env.example` to
+`.env` and put the key in it.
 
 Node 24 is a hard requirement, not a preference. TypeScript files run directly on its
 native type stripping, so there is no transpiler in the loop and an older runtime fails at
