@@ -35,6 +35,28 @@ fill all four, it is a note, not an objection.
 - Configuration lands with the code that needs it — no config entry, script or documented
   command for something not yet in the repo.
 
+## Code style
+
+Biome enforces what it can (`pnpm check`). These are the conventions it doesn't cover:
+
+- **Blank line before a `return` that follows other statements.** One-line functions need
+  no separation.
+- **Comments carry what the code can't.** Before writing one, ask what a reader loses
+  without it. Preconditions that can't be checked at runtime, decisions with a rejected
+  alternative, and non-obvious reasons earn their place. These do not: restating the
+  signature, repeating a DESIGN.md section instead of citing it, explaining a well-named
+  constant, or narrating control flow.
+- **Cite, don't duplicate.** DESIGN.md is the source of truth. A comment points at
+  `(§2.2)`; it never reproduces the formula, the rationale, or the trade-off, because then
+  a change to the document has two places to land and they drift.
+- **Length isn't the criterion.** A long comment explaining why CI runs typecheck from the
+  first workflow commit earns its place; `// increment counter` doesn't. Judge by what's
+  lost without it.
+- **Small functions, readable over defensive.** No speculative generality, no error
+  handling for conditions that can't occur here.
+- **Don't hand-format.** Run `pnpm check` before finishing. If Biome and this file
+  disagree, Biome wins — tell me so I fix the config.
+
 ## Docs
 
 Plain, direct English: one idea per sentence, lead with the point, concrete subject and

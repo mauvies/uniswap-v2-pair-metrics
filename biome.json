@@ -15,7 +15,13 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "preset": "recommended"
+      "preset": "recommended",
+      "style": {
+        "useBlockStatements": "error",
+        "useConst": "error",
+        "noNonNullAssertion": "error",
+        "useCollapsedElseIf": "error"
+      }
     }
   }
 }
