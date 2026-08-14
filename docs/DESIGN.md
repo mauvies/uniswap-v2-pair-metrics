@@ -517,13 +517,16 @@ hooks over classes "where possible", and nothing here needs a class. TanStack Qu
 fetching, keyed on `(pair, from, to)`. Tailwind v4 with a CSS-first `@theme` built from
 values extracted from the Figma; those values and the icon set ship with the package.
 
-**Two inconsistencies in the source are reproduced rather than normalised**, because the
+**Three inconsistencies in the source are reproduced rather than normalised**, because the
 brief asks for pixel fidelity and silently tidying a design is not our call. The Figma uses
 three near-identical blues — `#2E71F0`, `#2467E8`, `#4A90E2` — where a system would use one,
 and all three ship as separate tokens. The chart gridlines are stroked with radial gradients
 whose transform makes every pixel the stop-0 colour, so the solid `#F5F7F8` and `#627086` in
-the theme are exact reproductions rather than approximations. `docs/design-tokens.md` §1.1
-records how each was measured.
+the theme are exact reproductions rather than approximations. And the fifth Global Metrics
+card reads `Total Depolyed` in the design, so it reads that way here: correcting a
+misspelling silently is a deviation a reviewer holding the Figma cannot account for, and one
+they would reasonably read as ours. `docs/design-tokens.md` §1.1 and §2.3 record how each
+was measured.
 
 **The sidebar's five destinations, the account button and the search field are chrome.** The
 exercise is one page, so each carries an accessible name and Dashboard carries
@@ -565,12 +568,20 @@ unavailable — disabled reads as a data constraint, silently empty reads as a b
 availability from stored extent is §10.
 
 **Responsive.** The Figma defines a single 1440px frame, so every breakpoint is ours: metric
-grids collapse 5/4 → 2 → 1, the sidebar hides below `md`, the control row wraps, and the
+grids collapse 5/4 → 2 → 1 at `xl` and `sm`, the sidebar hides below `md`, the control row
+wraps, and the
 chart keeps a fixed height with fluid width. Page padding is 42px against the 63px sidebar,
 putting content at x=105 with the section titles and the header title rather than at the
 design's x=104 — a 1px inconsistency in a hand-placed frame, and alignment is worth more
 than reproducing it. Below `md` it drops to 16px, the design's own card padding rather than
 a new value, because a desktop inset spends a quarter of a phone screen on margin.
+
+The five-across row needs `xl` rather than `md`: five 206px cards and their four 10px gaps
+are 1070px of content, and a 768px viewport has 621px once the sidebar and padding are
+taken. At `xl` the grid tracks are the design's fixed 206px, so the row packs left and
+leaves the whitespace to its right that the frame draws; below that the tracks divide the
+width evenly and the cards fill them, which is what makes the one- and two-across layouts
+usable on a phone.
 
 Below `md` the header's search field collapses to its icon and expands back over the whole
 bar when tapped, with a dismiss control returning it to the icon. Side by side, the 351px
