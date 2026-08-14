@@ -26,5 +26,10 @@
         "useCollapsedElseIf": "error"
       }
     }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
   }
 }

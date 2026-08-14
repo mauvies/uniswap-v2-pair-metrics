@@ -44,6 +44,7 @@ pnpm check         # lint and format
 pnpm typecheck
 pnpm ingest        # one ingest run
 pnpm api           # the metrics service on http://127.0.0.1:3000
+pnpm web           # the dashboard on http://localhost:4000
 
 pnpm db:up         # Postgres 17 on localhost:5432
 pnpm db:down       # stop it; `pnpm db:down -v` drops the data with it
@@ -107,6 +108,25 @@ answers `503`, and it recovers on its own once the database is back — no resta
 
 Set `PORT` or `HOST` in `.env` to move it. It binds loopback by default.
 
+## Dashboard
+
+```sh
+pnpm web
+```
+
+Vite serves it on http://localhost:4000, or the next free port if that one is taken. It
+needs neither the database nor the API yet: the page is a placeholder that renders one
+metric card, which is enough to see the canvas colour, Inter at all four weights and the
+card tokens resolve. The shell replaces it in the next commit.
+
+Colour, type, radius and elevation come from the Figma extraction in
+`docs/design-tokens.md` and land as one `@theme` block in `packages/web/src/index.css`. Two
+inconsistencies in the source are reproduced rather than normalised, both deliberate: the
+design uses three near-identical blues (`#2E71F0`, `#2467E8`, `#4A90E2`) where a system
+would use one, and the chart gridlines are stroked with radial gradients whose transform
+makes every pixel the stop-0 colour — so the solid `#F5F7F8` and `#627086` in the theme are
+exact rather than approximations.
+
 ## Tests
 
 `shared`'s are pure and run anywhere. Ingest's and the API's write to a real Postgres,
@@ -127,5 +147,8 @@ already migrated; they fail naming the command that fixes it.
 
 - [`docs/DESIGN.md`](docs/DESIGN.md) — hypotheses, the APR formula and its derivation, the
   data model, the API contract, failure handling, and what was considered and rejected.
+- [`docs/design-tokens.md`](docs/design-tokens.md) — the Figma extraction: the colour, type,
+  radius and elevation primitives behind the `@theme`, per-section geometry, and what the
+  design leaves undefined.
 
 Run instructions for the services land with the code they describe.

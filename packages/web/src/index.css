@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+/*
+ * Transcribed from docs/design-tokens.md §1, which lists every call site each value was read
+ * from. The names are ours: the Figma file defines no variables and no shared styles.
+ *
+ * Duplicate literals stay duplicated — `border-selected` and `primary-strong` are both
+ * #2467e8, `surface` and `on-accent` both #ffffff. Aliasing one to the other would encode a
+ * system the design does not have (§1.1 calls the three blues template drift).
+ */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --color-canvas: #f9f9fb;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f6f6f6;
+  --color-surface-selected: #e2e8f3;
+  --color-surface-nav-active: #e7f1ff;
+
+  --color-border: #efeff4;
+  --color-border-selected: #2467e8;
+  --color-divider: #eeeeee;
+
+  --color-ink: #152935;
+  --color-ink-heading: #333335;
+  --color-ink-secondary: #43484d;
+  --color-ink-muted: #485465;
+  --color-ink-placeholder: #c0c0c5;
+
+  --color-icon: #808080;
+  --color-icon-nav: #77767b;
+  --color-icon-notification: #323232;
+  --color-icon-search: #515054;
+  --color-on-accent: #ffffff;
+
+  --color-primary: #2e71f0;
+  --color-primary-strong: #2467e8;
+  --color-accent-legend: #4a90e2;
+  --color-positive: #5ad700;
+  --color-avatar: #23366e;
+
+  --color-grid: #f5f7f8;
+  --color-grid-baseline: #627086;
+
+  --radius-card: 8px;
+  --radius-field: 6px;
+  --radius-pill: 2px;
+
+  --shadow-card: 0 0 5px 0 #efeff4;
+}
