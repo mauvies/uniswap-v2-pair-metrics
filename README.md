@@ -12,7 +12,7 @@ exception: ingest holds an hour back behind a 15-minute finality margin before s
 
 | Package | Role |
 |---|---|
-| `packages/shared` | Domain types, pair constants, the APR calculation, database schema and pool |
+| `packages/shared` | Domain types, the API response shape, pair constants, the APR calculation, database schema and pool |
 | `packages/ingest` | One-shot process: backfills 48h, then snapshots when data goes stale |
 | `packages/api` | Metrics for a pair over a date range |
 | `packages/web` | Dashboard with the APR chart |

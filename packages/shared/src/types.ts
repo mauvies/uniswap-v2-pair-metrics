@@ -36,3 +36,35 @@ export interface Pair {
   token0Symbol: string;
   token1Symbol: string;
 }
+
+/**
+ * The three below are §6.1's response, and they live here rather than in `api` because the
+ * web app reads the same shape. A contract two packages depend on belongs in the package
+ * they share — the reasoning §3 already applies to the connection pool.
+ */
+
+/** The interval actually served, which `range` echoes rather than the one requested. */
+export interface ResolvedRange {
+  fromHourUnix: number;
+  toHourUnix: number;
+}
+
+/** Persisted metrics as strings, APR the only numeric field. */
+export interface MetricPoint {
+  hourStartUnix: number;
+  reserve0: string;
+  reserve1: string;
+  liquidityUSD: string;
+  volumeToken0: string;
+  volumeToken1: string;
+  volumeUSD: string;
+  feesUSD: string;
+  imputed: boolean;
+  apr: AprByWindow;
+}
+
+export interface PairMetrics {
+  pair: Pair;
+  range: ResolvedRange | null;
+  points: MetricPoint[];
+}

@@ -146,7 +146,7 @@ unambiguous for any reviewer, no DST.
 
 ```
 packages/
-  shared/   domain types, pair constants, APR function, drizzle schema, connection pool
+  shared/   domain and contract types, pair constants, APR function, schema, connection pool
   ingest/   one-shot: subgraph client, staleness guard, upsert
   api/      pair metrics over a date range
   web/      dashboard and APR chart
@@ -187,6 +187,16 @@ row fixtures locally; only the parts that were already the same file twice moved
 filename ends `.test-helpers.ts` for the same reason it does in ingest and the API: vitest
 never collects it as a suite, and `.dockerignore`'s `**/*.test-helpers.ts` keeps it, and
 what it pulls in, out of both container images.
+
+**§6.1's response shape lives in `shared`, not in `api`.** `web` reads the same three types
+the route returns — `PairMetrics`, `MetricPoint`, `ResolvedRange` — and a contract
+redeclared on the client drifts from the server with nothing to catch it. That is the
+connection pool's trigger, a second consumer, applied one commit before the consumer lands:
+the shape is fixed by §6.1 and pinned by the route's tests, so there is nothing left to
+guess. Types erase, so this costs the bundle nothing: the barrel emits byte-identical
+output before and after the move, checked on 2026-08-14, and the measurement above stands.
+What stays in `api` is the logic that builds the shape — flooring, the lookback, the
+resolve — and `StoredExtent`, which describes stored rows rather than the wire.
 
 **Node 24 or newer, and the version is load-bearing.** Native type stripping runs `.ts`
 files with no transpiler, so no application code is transpiled and there is no `tsx`

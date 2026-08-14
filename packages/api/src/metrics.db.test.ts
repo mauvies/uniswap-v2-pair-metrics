@@ -1,3 +1,4 @@
+import type { PairMetrics } from "@uniswap-v2-pair-metrics/shared";
 import { HOUR_SECONDS } from "@uniswap-v2-pair-metrics/shared";
 import { pairHourMetrics } from "@uniswap-v2-pair-metrics/shared/schema";
 import {
@@ -10,7 +11,6 @@ import {
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "./app.ts";
 import { createDb, createPool } from "./db/index.ts";
-import type { PairMetrics } from "./metrics.ts";
 import { storedRow } from "./support.test-helpers.ts";
 
 const pool = testPool();

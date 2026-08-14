@@ -6,7 +6,10 @@ export { reconstructSeries } from "./reconstruct.ts";
 export type {
   AprByWindow,
   AprWindow,
+  MetricPoint,
   Pair,
   PairHourRow,
+  PairMetrics,
   ReconstructedHour,
+  ResolvedRange,
 } from "./types.ts";

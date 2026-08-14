@@ -1,23 +1,9 @@
-import type { Pair } from "@uniswap-v2-pair-metrics/shared";
+import type { PairMetrics } from "@uniswap-v2-pair-metrics/shared";
 import { findPair } from "@uniswap-v2-pair-metrics/shared";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { type Db, storedExtent, storedSeries } from "./db/index.ts";
-import {
-  buildPoints,
-  floorToHour,
-  lookbackStart,
-  type MetricPoint,
-  type ResolvedRange,
-  rangeOf,
-  resolveHours,
-} from "./series.ts";
-
-export interface PairMetrics {
-  pair: Pair;
-  range: ResolvedRange | null;
-  points: MetricPoint[];
-}
+import { buildPoints, floorToHour, lookbackStart, rangeOf, resolveHours } from "./series.ts";
 
 const params = z.object({
   address: z.string().regex(/^0x[0-9a-fA-F]{40}$/, "expected a 40-character hex address"),

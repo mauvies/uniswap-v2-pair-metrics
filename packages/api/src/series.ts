@@ -1,4 +1,10 @@
-import type { AprByWindow, PairHourRow, ReconstructedHour } from "@uniswap-v2-pair-metrics/shared";
+import type {
+  AprByWindow,
+  MetricPoint,
+  PairHourRow,
+  ReconstructedHour,
+  ResolvedRange,
+} from "@uniswap-v2-pair-metrics/shared";
 import {
   APR_WINDOWS,
   computeAprSeries,
@@ -13,25 +19,6 @@ export const LOOKBACK_HOURS = Math.max(...APR_WINDOWS) - 1;
 export interface StoredExtent {
   first: number;
   last: number;
-}
-
-export interface ResolvedRange {
-  fromHourUnix: number;
-  toHourUnix: number;
-}
-
-/** §6.1's point: persisted metrics as strings, APR the only numeric field. */
-export interface MetricPoint {
-  hourStartUnix: number;
-  reserve0: string;
-  reserve1: string;
-  liquidityUSD: string;
-  volumeToken0: string;
-  volumeToken1: string;
-  volumeUSD: string;
-  feesUSD: string;
-  imputed: boolean;
-  apr: AprByWindow;
 }
 
 /**
