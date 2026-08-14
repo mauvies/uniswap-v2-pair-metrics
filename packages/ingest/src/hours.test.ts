@@ -4,7 +4,7 @@ import { BACKFILL_HOURS, FINALITY_MARGIN_SECONDS } from "./constants.ts";
 import { assertFetchWindow, effectiveCurrentHour, isDue, lowerBound } from "./hours.ts";
 
 /** 2026-08-12 09:00:00 UTC, hour-aligned. */
-const HOUR = 1786525200;
+const HOUR = 1_786_525_200;
 
 describe("effectiveCurrentHour", () => {
   it("holds an hour back until the margin has passed", () => {
@@ -14,11 +14,11 @@ describe("effectiveCurrentHour", () => {
     expect(effectiveCurrentHour(justClosed + 1, justClosed + 1)).toBe(HOUR);
     // A second before the margin is up, still too recent.
     expect(
-      effectiveCurrentHour(justClosed + FINALITY_MARGIN_SECONDS - 1, justClosed + 999999),
+      effectiveCurrentHour(justClosed + FINALITY_MARGIN_SECONDS - 1, justClosed + 999_999),
     ).toBe(HOUR);
     // Once it has passed, the hour is fetchable — the window is half-open, so the bound
     // moves to the hour after it.
-    expect(effectiveCurrentHour(justClosed + FINALITY_MARGIN_SECONDS, justClosed + 999999)).toBe(
+    expect(effectiveCurrentHour(justClosed + FINALITY_MARGIN_SECONDS, justClosed + 999_999)).toBe(
       justClosed,
     );
   });
@@ -46,7 +46,7 @@ describe("effectiveCurrentHour", () => {
 
 describe("lowerBound", () => {
   it("spans exactly the backfill window on a first run", () => {
-    expect(effectiveCurrentHour(HOUR + FINALITY_MARGIN_SECONDS, HOUR + 999999)).toBe(HOUR);
+    expect(effectiveCurrentHour(HOUR + FINALITY_MARGIN_SECONDS, HOUR + 999_999)).toBe(HOUR);
     expect(lowerBound(undefined, HOUR)).toBe(HOUR - BACKFILL_HOURS * HOUR_SECONDS);
     expect((HOUR - lowerBound(undefined, HOUR)) / HOUR_SECONDS).toBe(BACKFILL_HOURS);
   });

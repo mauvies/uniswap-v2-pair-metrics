@@ -9,13 +9,16 @@
   },
   "packageManager": "pnpm@10.30.3",
   "scripts": {
-    "build": "pnpm -r --if-present build",
+    "db:up": "docker compose up -d --wait db",
+    "db:down": "docker compose down",
     "db:generate": "pnpm --filter @uniswap-v2-pair-metrics/shared db:generate",
-    "db:migrate": "pnpm --filter @uniswap-v2-pair-metrics/shared db:migrate",
-    "typecheck": "pnpm -r --if-present typecheck",
+    "db:migrate": "pnpm db:up && pnpm --filter @uniswap-v2-pair-metrics/shared db:migrate",
+    "db:reset": "docker compose down -v && pnpm db:migrate",
+    "ingest": "pnpm --filter @uniswap-v2-pair-metrics/ingest start",
     "test": "pnpm -r --if-present test",
     "check": "biome check .",
-    "check:fix": "biome check --write ."
+    "check:fix": "biome check --write .",
+    "typecheck": "pnpm -r --if-present typecheck"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.8",

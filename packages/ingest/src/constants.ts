@@ -1,29 +1,19 @@
-/**
- * How far behind the indexer head an hour must be before it is safe to store.
- *
- * Ethereum finalises two epochs back, ~12.8 minutes, but we read the subgraph rather than
- * the chain and a finalised block still has to be indexed (measured lag: 22 s and 35 s).
- * 15 minutes is two epochs plus room for that. Rows are immutable (§5.1), so an hour built
- * from blocks that later reorg would be wrong permanently.
- */
+/** Two epochs of finality (~12.8 min) plus room for indexing lag (measured 22 s and 35 s). */
 export const FINALITY_MARGIN_SECONDS = 900;
 
 /** The gateway served exactly this many rows for `first: 1000` (§9). */
 export const PAGE_SIZE = 1000;
 
-/** Hours a first run collects (§5.5). */
 export const BACKFILL_HOURS = 48;
 
-/** Above this the indexer is lagging enough to be worth a line in the log (§8). */
+/** Below FINALITY_MARGIN_SECONDS, so it warns before there is damage rather than after (§8). */
 export const LAG_WARN_SECONDS = 600;
 
-/** Attempts per request, and the sleeps between them. */
 export const RETRY_ATTEMPTS = 3;
 export const RETRY_BACKOFF_MS = [250, 500] as const;
 
 /**
- * A hung socket outlives a one-shot process, which is worse than a failure: a scheduler
- * ends up with an invocation that never returns. The abort classifies as transport, so a
- * slow-but-alive gateway still gets its retries.
+ * A hung socket outlives a one-shot process, leaving a scheduler with an invocation that
+ * never returns. The abort classifies as transport, so a slow gateway still gets retries.
  */
 export const REQUEST_TIMEOUT_MS = 10_000;

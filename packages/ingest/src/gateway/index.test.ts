@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { GatewayError } from "./classify.ts";
-import { RETRY_ATTEMPTS } from "./constants.ts";
-import { createGateway } from "./gateway.ts";
+import { RETRY_ATTEMPTS } from "../constants.ts";
+import { GatewayError } from "./failures.ts";
+import { createGateway } from "./index.ts";
 
-const URL = "https://gateway.thegraph.com/api/SECRET_KEY/subgraphs/id/Whatever";
+const URL = "https://gateway.thegraph.com/api/SECRET_KEY/subgraphs/id/whatever";
 
 const META = { _meta: { block: { timestamp: 1786527767 }, hasIndexingErrors: false } };
 

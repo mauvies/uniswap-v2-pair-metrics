@@ -1,20 +1,14 @@
 import type { ZodError, ZodType } from "zod";
+import { PAGE_SIZE, REQUEST_TIMEOUT_MS, RETRY_ATTEMPTS } from "../constants.ts";
+import { assertFetchWindow } from "../hours.ts";
 import {
   backoffMs,
   classifyStatus,
   GatewayError,
   type GatewayFailure,
   isRetryable,
-} from "./classify.ts";
-import { PAGE_SIZE, REQUEST_TIMEOUT_MS, RETRY_ATTEMPTS } from "./constants.ts";
-import { assertFetchWindow } from "./hours.ts";
-import {
-  envelope,
-  type Meta,
-  metaResponse,
-  type PairHour,
-  pairHoursResponse,
-} from "./responses.ts";
+} from "./failures.ts";
+import { envelope, type Meta, metaResponse, type PairHour, pairHoursResponse } from "./schemas.ts";
 
 const META_QUERY = `{ _meta { block { timestamp } hasIndexingErrors } }`;
 
@@ -157,12 +151,8 @@ export function createGateway(options: GatewayOptions): Gateway {
         variables: { pair, from, to, first: pageSize },
       });
 
-      // Checked here, where `from` and `to` are in hand, so no caller can forget it.
-      assertFetchWindow(
-        pairHourDatas.map((row) => row.hourStartUnix),
-        from,
-        to,
-      );
+      const hoursArray = pairHourDatas.map((row) => row.hourStartUnix);
+      assertFetchWindow(hoursArray, from, to);
 
       return pairHourDatas;
     },

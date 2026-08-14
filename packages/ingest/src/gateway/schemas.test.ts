@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { envelope, metaResponse, pairHoursResponse } from "./responses.ts";
+import { envelope, metaResponse, pairHoursResponse } from "./schemas.ts";
 
 /** A real row, trimmed to the fields fetched. */
 function hour(overrides: Record<string, unknown> = {}) {

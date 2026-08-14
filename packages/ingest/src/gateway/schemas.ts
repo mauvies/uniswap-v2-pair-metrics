@@ -2,12 +2,10 @@ import { HOUR_SECONDS } from "@uniswap-v2-pair-metrics/shared";
 import { z } from "zod";
 
 /**
- * Plain decimal notation, no sign and no exponent — the shape every `BigDecimal` arrives
- * in, verified on 2026-08-13 across the full range the two pairs span: `"0"`,
- * `"0.000000008423729439481026545405760632628317"` and `"17594144.06839686623525025832575509"`.
- *
- * The string is kept as-is. Parsing it would lose the tail beyond 16 digits (§3); this
- * only decides whether to admit it.
+ * Plain decimal, no sign and no exponent: the shape verified on 2026-08-13 across the whole
+ * range the two pairs span, from `"0.000000008423729439481026545405760632628317"` to
+ * `"17594144.06839686623525025832575509"`. Matching only decides whether to admit the
+ * string; it is stored unparsed (§3).
  */
 const DECIMAL = /^\d+(\.\d+)?$/;
 
@@ -20,14 +18,13 @@ const bigDecimal = z
   .string()
   .refine((value) => DECIMAL.test(value), "expected a finite non-negative decimal");
 
-/** `BigInt` arrives as a string; the column is `bigint` in `mode: "number"`. */
 const txnCount = z
   .string()
   .regex(/^\d+$/)
   .transform(Number)
   .refine(Number.isSafeInteger, "transaction count beyond 2^53");
 
-/** Hour buckets arrive aligned from the source (§2.5); the column enforces it too (§4). */
+/** Rejected here rather than at the insert, where it would surface as a constraint name. */
 const hourStart = z
   .number()
   .int()

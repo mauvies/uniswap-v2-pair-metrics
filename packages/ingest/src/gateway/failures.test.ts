@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { RETRY_ATTEMPTS } from "../constants.ts";
 import {
   backoffMs,
   classifyStatus,
   GatewayError,
   type GatewayFailure,
   isRetryable,
-} from "./classify.ts";
-import { RETRY_ATTEMPTS } from "./constants.ts";
+} from "./failures.ts";
 
 const RETRYABLE: GatewayFailure[] = [
   { kind: "transport", cause: new Error("ECONNRESET") },

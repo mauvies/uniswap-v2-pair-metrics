@@ -13,26 +13,6 @@ jobs:
   check:
     runs-on: ubuntu-latest
 
-    # Same image and credentials as docker-compose.yaml, so a test meets the same database
-    # here as it does locally.
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_USER: uniswap
-          POSTGRES_PASSWORD: uniswap
-          POSTGRES_DB: uniswap_v2_pair_metrics
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-
-    env:
-      DATABASE_URL: postgres://uniswap:uniswap@localhost:5432/uniswap_v2_pair_metrics
-
     steps:
       - uses: actions/checkout@v4
 
@@ -51,8 +31,8 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Migrate
-        run: pnpm db:migrate
-
+      # Brings up the compose database and migrates it, so CI runs the command a
+      # developer runs. A service container here would be a second Postgres definition
+      # to keep in step with docker-compose.yaml.
       - name: Test
         run: pnpm test

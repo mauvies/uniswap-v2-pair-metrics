@@ -349,8 +349,8 @@ Per pair, independently:
    computed once per run; an hour completing mid-run is picked up by the next.
 3. Validate with zod, then write in one transaction for that pair with `INSERT … ON CONFLICT
    DO NOTHING`. A response that fails validation is never persisted.
-4. A failure on one pair leaves the other's committed data intact; the run exits non-zero
-   and the failed pair heals on the next run.
+4. A failure on one pair leaves every other pair's committed data intact; the run exits
+   non-zero and the failed pair heals on the next run.
 
 Two properties of step 2 carry weight. The window is an interval, not a count: a quiet hour
 produces no entity, so 48 hours yields 48 rows only for a pair that traded in every one of
@@ -553,7 +553,11 @@ and each invariant is pinned by a test rather than asserted:
 - Pair symbols are constants verified once, not re-checked at runtime.
 - Rows are never updated, so a subgraph reindex that corrects a value we already stored does
   not propagate. Accepted in exchange for immutability (§5.1); a corrective re-ingest would
-  need the rows deleted first.
+  need the rows deleted first — and deleted as a *suffix*, everything from some hour
+  onward. The lower bound is `MAX(hour_start_unix) + 1h`, so it only ever moves forward: a
+  hole punched in the middle of the series is never revisited, and the API would then serve
+  it as a quiet hour. Ingest cannot produce such a hole itself, since a run writes one
+  transaction per pair and always resumes from the newest stored hour.
 - The API range is uncapped, and the stored series grows by at most 24 rows per pair per day
   for as long as ingest runs. Response size follows the range, not the row count, since quiet
   hours are reconstructed: 24 points per day requested, so roughly 720 after a month and
@@ -621,6 +625,13 @@ inactive pairs the answer would be a recorded last-attempt with backoff, not a b
 `imputed` would drop four strings per point. Rejected: the brief asks for a service that
 retrieves the metrics, not an endpoint shaped to one client (§6.1), and the coin-denominated
 amounts are the reading its introduction gives volume and liquidity (§4).
+
+**A logging library (pino, winston).** Rejected: the process emits a handful of structured
+lines per run, and tests assert on an injected sink by value rather than by capturing
+output, so a library would contribute formatting, levels and transports none of which are
+used. `JSON.stringify` to stdout, errors to stderr, is the whole requirement — a few lines,
+against the same reasoning §5.4 uses to keep the retry loop hand-written. Worth revisiting
+the moment log volume, sampling or rotation becomes a question.
 
 **A client state library (Zustand, Jotai, Redux).** UI state is three values — pair, range,
 moving-average window — all local to the Performance card. Server state belongs to TanStack

@@ -17,6 +17,22 @@ Conventional Commits. Every commit compiles and passes `pnpm check` and `pnpm ty
 `pnpm test` once tests exist. The history is clean from the first commit, not salvaged by a
 rebase later.
 
+## Before calling something done
+
+Walk the path of whoever will use it, from a clean state rather than from yours.
+
+- **Wrote a function?** Name its caller. If there isn't one yet, say so — an exported
+  helper with no call site is a guard someone can forget.
+- **Wrote a command or a script?** Run it with the database down, the container stopped,
+  the env unset. Green on your warmed-up machine proves nothing about a fresh clone.
+- **Wrote a test helper?** Say what the database, the filesystem and the environment look
+  like after it has run.
+- **Added a requirement?** Put it in the package that has it, not the one you happened to
+  be editing.
+
+Every mistake worth a correction here so far has been the same one: a piece written
+correctly in isolation, with the path around it never walked.
+
 ## Objecting to a decision
 
 You have standing authority — an obligation, really — to challenge anything in DESIGN.md or
@@ -77,15 +93,18 @@ was rejected and why — read it before adding a dependency.
 
 ## Commands
 
-```
-pnpm check              # Biome: lint and format
-pnpm typecheck
-pnpm test
-pnpm build
+All from the repo root. Nothing needs a database started by hand — the commands that need
+one bring it up.
 
-docker compose up -d db # Postgres 17, localhost:5432
-docker compose down     # add -v to drop the volume
-pnpm db:migrate         # apply migrations; db:generate after editing schema.ts
+```
+pnpm db:up          # Postgres 17 on localhost:5432
+pnpm db:down
+pnpm db:migrate     # db:generate after editing schema.ts
+pnpm ingest         # one ingest run
+pnpm test           # ingest's tests start the database and migrate it first
+pnpm check          # Biome: lint and format
+pnpm typecheck
+
 ```
 
 Run instructions for the services land with the packages that introduce them.

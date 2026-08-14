@@ -1,11 +1,9 @@
-import { RETRY_BACKOFF_MS } from "./constants.ts";
+import { RETRY_BACKOFF_MS } from "../constants.ts";
 
 /**
- * Why a gateway request failed.
- *
- * The taxonomy is by cause rather than by status because this gateway answers HTTP 200
- * with an `errors` array for every failure, auth included (§1). Reading the status alone
- * would classify an expired key as success.
+ * By cause rather than by status: this gateway answers HTTP 200 with an `errors` array for
+ * every failure, auth included (§1), so reading the status alone would classify an expired
+ * key as success.
  */
 export type GatewayFailure =
   | { kind: "transport"; cause: unknown }
@@ -27,10 +25,8 @@ export class GatewayError extends Error {
 }
 
 /**
- * Retry what a second attempt could plausibly answer differently, and only that.
- *
- * The switch is exhaustive with no `default`, so adding a variant without deciding its
- * verdict is a compile error.
+ * Retry only what a second attempt could answer differently. Exhaustive with no `default`,
+ * so adding a variant without deciding its verdict fails to compile.
  */
 export function isRetryable(failure: GatewayFailure): boolean {
   switch (failure.kind) {
@@ -62,7 +58,6 @@ export function classifyStatus(status: number): GatewayFailure | undefined {
   return { kind: "http-error", status };
 }
 
-/** `undefined` once the attempts are spent. */
 export function backoffMs(attempt: number): number | undefined {
   return RETRY_BACKOFF_MS[attempt - 1];
 }
