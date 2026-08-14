@@ -146,7 +146,7 @@ unambiguous for any reviewer, no DST.
 
 ```
 packages/
-  shared/   domain types, pair constants, APR function, drizzle schema
+  shared/   domain types, pair constants, APR function, drizzle schema, connection pool
   ingest/   one-shot: subgraph client, staleness guard, upsert
   api/      pair metrics over a date range
   web/      dashboard and APR chart
@@ -166,6 +166,19 @@ self-contained ESM, no external dependencies, runs on plain Node. The drizzle sc
 reached through a `./schema` subpath rather than the barrel, because a top-level
 `pgTable(...)` call cannot be proven side-effect-free: re-exporting it pinned 74 kB of
 column builders into every consumer, including the browser bundle `web` will produce.
+
+The pool and the drizzle instance sit behind a second subpath, `./db`, once ingest and the
+API turned out to open the same connection two ways. Re-measured on 2026-08-14: the barrel
+bundles to 1,549 bytes with no drizzle or pg symbols in it, and `pg` does not bundle for a
+browser at all — esbuild fails to resolve `net`, `events` and `util`. So this boundary holds
+harder than the schema's: leaking the schema was silent weight, leaking the connection
+breaks the web build. `max` stays with the caller, since one pair at a time and concurrent
+requests want different pools.
+
+Both subpaths, and `databaseUrl`, live under `src/db/` — one place for everything that
+answers "how do we talk to Postgres", separate from the domain code the barrel exports.
+`./schema` and `./db` still name two files there, never a folder index: an index re-exporting
+both would drag the schema back through `./db`.
 
 **Node 24 or newer, and the version is load-bearing.** Native type stripping runs `.ts`
 files with no transpiler, so no application code is transpiled and there is no `tsx`

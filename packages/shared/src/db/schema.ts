@@ -9,7 +9,7 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { FEE_RATE, HOUR_SECONDS } from "./constants.ts";
+import { FEE_RATE, HOUR_SECONDS } from "../constants.ts";
 
 // Rendered into DDL, so each constant has one home (§4). sql.raw because a bound
 // parameter cannot appear in DDL — interpolating directly produces `$1`.

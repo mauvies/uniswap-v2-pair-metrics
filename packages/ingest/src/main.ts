@@ -8,7 +8,9 @@ const startedAt = Date.now();
 
 async function main(): Promise<number> {
   const config = loadConfig();
-  const pool = createPool(config.databaseUrl);
+  // Pairs are processed one at a time; the second connection bounds the damage if that
+  // ever stops being true.
+  const pool = createPool(config.databaseUrl, { max: 2 });
   const db = createDb(pool);
   const gateway = createGateway({ url: config.gatewayUrl });
   const nowInSeconds = Math.floor(Date.now() / 1000);

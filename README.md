@@ -12,7 +12,7 @@ exception: ingest holds an hour back behind a 15-minute finality margin before s
 
 | Package | Role |
 |---|---|
-| `packages/shared` | Domain types, pair constants, the APR calculation, database schema |
+| `packages/shared` | Domain types, pair constants, the APR calculation, database schema and pool |
 | `packages/ingest` | One-shot process: backfills 48h, then snapshots when data goes stale |
 | `packages/api` | Metrics for a pair over a date range |
 | `packages/web` | Dashboard with the APR chart |
@@ -49,7 +49,7 @@ pnpm db:up         # Postgres 17 on localhost:5432
 pnpm db:down       # stop it; `pnpm db:down -v` drops the data with it
 pnpm db:migrate    # apply migrations, starting the database if it is down
 pnpm db:reset      # drop everything and migrate from scratch
-pnpm db:generate   # regenerate after editing packages/shared/src/schema.ts
+pnpm db:generate   # regenerate after editing packages/shared/src/db/schema.ts
 ```
 
 Set `POSTGRES_PORT` in `.env` if 5432 is taken; the container, the migrations and ingest

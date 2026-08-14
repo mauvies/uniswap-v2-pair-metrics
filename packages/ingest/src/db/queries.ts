@@ -1,6 +1,6 @@
+import type { Db } from "@uniswap-v2-pair-metrics/shared/db";
 import { pairHourMetrics } from "@uniswap-v2-pair-metrics/shared/schema";
 import { eq, max } from "drizzle-orm";
-import type { Db } from "./connection.ts";
 import type { InsertRow } from "./rows.ts";
 
 export async function lastStoredHour(db: Db, pairAddress: string): Promise<number | undefined> {

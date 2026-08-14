@@ -1,6 +1,6 @@
+import type { Db } from "@uniswap-v2-pair-metrics/shared/db";
 import { pairHourMetrics } from "@uniswap-v2-pair-metrics/shared/schema";
 import { max } from "drizzle-orm";
-import type { Db } from "./connection.ts";
 
 /**
  * The newest stored hour of every pair that has one. A pair with no rows is absent from

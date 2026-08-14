@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { expect, expectTypeOf, it } from "vitest";
-import { FEE_RATE } from "./constants.ts";
+import { FEE_RATE } from "../constants.ts";
+import type { PairHourRow } from "../types.ts";
 import type { pairHourMetrics } from "./schema.ts";
-import type { PairHourRow } from "./types.ts";
 
 type Stored = typeof pairHourMetrics.$inferSelect;
 
@@ -19,7 +19,7 @@ it("the stored row and the domain type describe the same columns", () => {
 // would disagree with every gate still green.
 it("the committed migration was generated from the current FEE_RATE", () => {
   const migration = readFileSync(
-    new URL("../migrations/0000_pair_hour_metrics.sql", import.meta.url),
+    new URL("../../migrations/0000_pair_hour_metrics.sql", import.meta.url),
     "utf8",
   );
 
