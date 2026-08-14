@@ -3,10 +3,9 @@
 Hourly liquidity, volume and fee snapshots for two Uniswap v2 pairs on Ethereum mainnet,
 served over HTTP and plotted as APR in a React dashboard.
 
-Data comes from the Uniswap v2 **subgraph**, not from chain scanning — so there is no RPC
-client and no log decoding. Reorgs are the indexer's problem rather than ours, with one
-exception: ingest holds an hour back behind a 15-minute finality margin before storing it
-(`docs/DESIGN.md` §5.2).
+Data comes from the Uniswap v2 **subgraph** rather than from chain scanning. Ingest holds
+each hour back behind a 15-minute finality margin, so the newest stored point is always at
+least that far behind the clock (`docs/DESIGN.md` §5.2).
 
 ## Layout
 
@@ -115,17 +114,7 @@ pnpm web
 ```
 
 Vite serves it on http://localhost:4000, or the next free port if that one is taken. It
-needs neither the database nor the API yet: the page is a placeholder that renders one
-metric card, which is enough to see the canvas colour, Inter at all four weights and the
-card tokens resolve. The shell replaces it in the next commit.
-
-Colour, type, radius and elevation come from the Figma extraction in
-`docs/design-tokens.md` and land as one `@theme` block in `packages/web/src/index.css`. Two
-inconsistencies in the source are reproduced rather than normalised, both deliberate: the
-design uses three near-identical blues (`#2E71F0`, `#2467E8`, `#4A90E2`) where a system
-would use one, and the chart gridlines are stroked with radial gradients whose transform
-makes every pixel the stop-0 colour — so the solid `#F5F7F8` and `#627086` in the theme are
-exact rather than approximations.
+needs neither the database nor the API yet.
 
 ## Tests
 

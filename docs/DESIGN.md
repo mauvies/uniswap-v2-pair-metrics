@@ -517,6 +517,22 @@ hooks over classes "where possible", and nothing here needs a class. TanStack Qu
 fetching, keyed on `(pair, from, to)`. Tailwind v4 with a CSS-first `@theme` built from
 values extracted from the Figma; those values and the icon set ship with the package.
 
+**Two inconsistencies in the source are reproduced rather than normalised**, because the
+brief asks for pixel fidelity and silently tidying a design is not our call. The Figma uses
+three near-identical blues — `#2E71F0`, `#2467E8`, `#4A90E2` — where a system would use one,
+and all three ship as separate tokens. The chart gridlines are stroked with radial gradients
+whose transform makes every pixel the stop-0 colour, so the solid `#F5F7F8` and `#627086` in
+the theme are exact reproductions rather than approximations. `docs/design-tokens.md` §1.1
+records how each was measured.
+
+**The sidebar's five destinations, the account button and the search field are chrome.** The
+exercise is one page, so each carries an accessible name and Dashboard carries
+`aria-current`, but none of them goes anywhere and the field has nothing to search. They are
+reproduced because the design draws them. Rendering them dead rather than dropping them is
+the opposite of the range-pill decision below, and for the same reason: a pill that is
+disabled tells the reader something true about the data, whereas a missing sidebar would
+just be an unfaithful reproduction of a frame the reviewer is holding.
+
 ```
 components/layout      AppShell, Sidebar, TopBar
 components/ui          Card, MetricCard, PillGroup, IconButton, SectionHeading
@@ -550,7 +566,17 @@ availability from stored extent is §10.
 
 **Responsive.** The Figma defines a single 1440px frame, so every breakpoint is ours: metric
 grids collapse 5/4 → 2 → 1, the sidebar hides below `md`, the control row wraps, and the
-chart keeps a fixed height with fluid width.
+chart keeps a fixed height with fluid width. Page padding is 42px against the 63px sidebar,
+putting content at x=105 with the section titles and the header title rather than at the
+design's x=104 — a 1px inconsistency in a hand-placed frame, and alignment is worth more
+than reproducing it. Below `md` it drops to 16px, the design's own card padding rather than
+a new value, because a desktop inset spends a quarter of a phone screen on margin.
+
+Below `md` the header's search field collapses to its icon and expands back over the whole
+bar when tapped, with a dismiss control returning it to the icon. Side by side, the 351px
+field and the title do not fit; the alternative, shrinking the field, leaves two cramped
+things instead of one whole one. The dismiss glyph is ours, since a design with no collapsed
+state has nothing to dismiss.
 
 **States the design does not define** — loading, error, empty — occupy the plot area at its
 fixed height, so switching pairs causes no layout shift. The card keeps its full chrome in
