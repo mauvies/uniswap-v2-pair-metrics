@@ -61,7 +61,20 @@ One shot: it collects, writes and exits. Nothing sleeps or loops, so frequent in
 safe — the process decides whether there is anything to do. The first run backfills 48
 hours; later ones write only the hours that have closed since.
 
-Schedule it with `15 * * * *`, not on the hour: hours are stored once they clear a
+Two ways to run it, one entry point:
+
+```sh
+pnpm ingest                      # on the host, against localhost
+docker compose run --rm ingest   # in a container, against the compose network
+```
+
+The container path starts the database and waits until it is healthy, and builds the image
+the first time. It does not migrate: run `pnpm db:migrate` once before the first ingest,
+whichever way you run it. Without the table both pairs fail and the run exits `1`. The image
+holds a copy of the source, so rebuild it with `docker compose build ingest` after editing
+`packages/ingest` or `packages/shared`.
+
+Schedule either with `15 * * * *`, not on the hour: hours are stored once they clear a
 15-minute finality margin, so an on-the-hour run would always find the newest hour too
 recent (`docs/DESIGN.md` §5.2).
 

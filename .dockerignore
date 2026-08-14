@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+.git
+docs
+
+# The key reaches the container through the environment (compose passes it), never through
+# a layer: a file baked into an image is readable by anyone who can pull it.
+.env
+.env.*
+
+# Test source would ship without a runner: the image installs production dependencies only.
+**/*.test.ts
+**/*.test-helpers.ts

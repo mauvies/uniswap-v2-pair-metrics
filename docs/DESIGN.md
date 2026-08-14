@@ -371,9 +371,9 @@ is older than the threshold* — produces every case, with no special branches:
 | Inactive pair | empty, every run | Query 48h, find nothing, exit 0 |
 
 The 60-minute guard lives inside the process, so frequent invocation is safe — the process
-decides whether there is anything to do. Three invocation modes, one binary: one-shot
-`docker compose run`, an optional scheduler profile, and a documented cron line. Nothing
-sleeps or loops internally. The cron line is `15 * * * *`, not `0 * * * *`: on the hour the
+decides whether there is anything to do. Two invocation modes, one entry point: `pnpm
+ingest` against a database on localhost, and `docker compose run --rm ingest` against the
+compose network — either of them driven by a cron line. Nothing sleeps or loops internally. The cron line is `15 * * * *`, not `0 * * * *`: on the hour the
 newest hour has not cleared the margin yet, so every run would find nothing and each write
 would land an hour late.
 

@@ -26,5 +26,22 @@ services:
       retries: 10
       start_period: 10s
 
+  # One-shot, not a daemon: `docker compose run --rm ingest` per §5.5. Behind a profile so
+  # `docker compose up` starts only the database.
+  ingest:
+    profiles: [ ingest ]
+    # Exits non-zero by design when a pair fails, and heals on the next invocation (§5.5).
+    # Restarting it would turn a scheduled one-shot into a crash loop.
+    restart: "no"
+    build:
+      context: .
+      dockerfile: packages/ingest/Dockerfile
+    environment:
+      THEGRAPH_API_KEY: ${THEGRAPH_API_KEY}
+      DATABASE_URL: postgres://${POSTGRES_USER:-uniswap}:${POSTGRES_PASSWORD:-uniswap}@db:5432/${POSTGRES_DB:-uniswap_v2_pair_metrics}
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   db-data:
