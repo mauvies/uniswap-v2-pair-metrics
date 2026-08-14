@@ -141,3 +141,10 @@ already migrated; they fail naming the command that fixes it.
   design leaves undefined.
 
 Run instructions for the services land with the code they describe.
+
+## Attribution
+
+The five icons in the dashboard's Performance card header are
+[Line Awesome](https://icons8.com/line-awesome) glyphs by Icons8, shipped as inline SVG
+rather than the font. Line Awesome is dual-licensed: the fonts under SIL OFL 1.1, everything
+else under MIT.

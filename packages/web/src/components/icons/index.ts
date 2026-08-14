@@ -1,5 +1,9 @@
 export { Close } from "./Close.tsx";
+export { Download } from "./Download.tsx";
+export { Expand } from "./Expand.tsx";
+export { HelpCircle } from "./HelpCircle.tsx";
 export { Logo } from "./Logo.tsx";
+export { MoreVertical } from "./MoreVertical.tsx";
 export { NavDashboard } from "./NavDashboard.tsx";
 export { NavDiscover } from "./NavDiscover.tsx";
 export { NavInvoices } from "./NavInvoices.tsx";
@@ -7,3 +11,4 @@ export { NavSettings } from "./NavSettings.tsx";
 export { NavStrategies } from "./NavStrategies.tsx";
 export { Notification } from "./Notification.tsx";
 export { Search } from "./Search.tsx";
+export { Share } from "./Share.tsx";

@@ -583,6 +583,11 @@ leaves the whitespace to its right that the frame draws; below that the tracks d
 width evenly and the cards fill them, which is what makes the one- and two-across layouts
 usable on a phone.
 
+Below `md` the header sticks to the top of the viewport rather than scrolling away with the
+content. With the sidebar hidden it is the only navigation on screen, and the collapsed
+search trigger lives in it; scrolling a long series to reach either would be worse than the
+64px it costs. Above `md` the sidebar is always visible, so the header scrolls normally.
+
 Below `md` the header's search field collapses to its icon and expands back over the whole
 bar when tapped, with a dismiss control returning it to the icon. Side by side, the 351px
 field and the title do not fit; the alternative, shrinking the field, leaves two cramped

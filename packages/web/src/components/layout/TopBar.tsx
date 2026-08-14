@@ -22,7 +22,7 @@ export function TopBar() {
   }
 
   return (
-    <header className="relative flex h-[64px] shrink-0 items-center justify-between border-b border-border bg-surface px-[16px] md:pr-[48px] md:pl-[42px]">
+    <header className="sticky top-0 z-10 flex h-[64px] shrink-0 items-center justify-between border-b border-border bg-surface px-[16px] md:relative md:pr-[48px] md:pl-[42px]">
       <h1 className="text-[20px] font-bold text-ink-heading">Dashboard</h1>
 
       <div className="hidden md:block">
@@ -36,7 +36,7 @@ export function TopBar() {
         aria-expanded={open}
         aria-controls={overlayId}
         onClick={() => setOpen(true)}
-        className="grid size-[40px] shrink-0 place-items-center rounded-field text-icon-search [&>svg]:size-[20px] md:hidden"
+        className="grid size-[40px] shrink-0 place-items-center rounded-field text-icon-search [&>svg]:size-[16px] md:hidden"
       >
         <Search />
       </button>
