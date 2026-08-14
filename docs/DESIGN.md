@@ -405,7 +405,7 @@ would land an hour late.
 ### 6.1 Contract
 
 ```
-GET /pairs/:address/metrics?from=<ISO-8601>&to=<ISO-8601>
+GET /pairs/:address/metrics[?from=<ISO-8601>][&to=<ISO-8601>]
 → 200 {
     pair:  { address, token0Symbol, token1Symbol },
     range: { fromHourUnix, toHourUnix },
@@ -440,6 +440,23 @@ GET /health
   reaches past `first_stored_hour`, the lookback truncates and the windows it cannot fill
   are `null` — §2.4's warm-up, surfacing mid-range instead of at the start of history. Both
   behaviours carry dedicated tests.
+- **The lookback starts at the newest stored hour at or before `from − 23h`, not at
+  `from − 23h`.** A pair can stay quiet for longer than the window, and `hour_start_unix >=
+  from − 23h` then returns nothing before the requested range: the series starts inside it,
+  and its first points come back as warm-up `null` when their windows are in fact full of
+  quiet hours (§2.3). That anchor row is what makes those hours reconstructable, and the
+  bug it prevents is invisible — the response is well-formed and the numbers are wrong.
+  Pinned by `a gap spanning the lookback still fills the window`.
+- **`from` and `to` are optional and both are inclusive**, floored to the hour they fall in:
+  `to=…T23:59:59Z` keeps the hour that started at 23:00. An absent bound falls back to the
+  pair's first or last stored hour, so a request with no query string asks for everything
+  stored. `from > to` with both supplied is a `400`; a supplied bound outside stored history
+  is an empty intersection, not an error.
+- **The read path takes no transaction.** A request costs two statements — the pair's stored
+  extent, then its rows — and ingest can commit between them. Rows are immutable and only
+  ever appended forward (§2.3, §5.1), so the only reachable effect is that a request racing
+  a write may not carry the newest hour, exactly as if it had arrived a moment earlier.
+  Snapshot isolation would buy nothing a reader can observe.
 - Persisted metrics are strings end to end; APR is the only numeric field.
 - **In `/health`, a pair with no rows reports `lastHourStartUnix: null, ageSeconds: null`.**
   Null means nothing stored, not an error: the table cannot say *why* a pair is empty, and
@@ -460,7 +477,13 @@ on traffic.
 
 Errors: malformed address, unparseable dates or `from > to` → `400`; well-formed but
 unconfigured address → `404`; valid range with no data → `200` with an empty array, never a
-`500`.
+`500`. A read that fails answers `503`, as `/health` does, and says only that the read
+failed: the statements are fixed and parameterised, so every failure this path can reach is
+the database being unavailable rather than a query being wrong.
+
+Addresses are matched case-insensitively, so the EIP-55 form a block explorer hands out
+resolves to the same pair as the lowercase one, and `pair.address` echoes back the stored
+lowercase form either way.
 
 ### 6.2 All three windows are returned per point — decided
 

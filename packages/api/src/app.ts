@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import type { Db } from "./db/index.ts";
 import { registerHealth } from "./health.ts";
+import { registerMetrics } from "./metrics.ts";
 
 export interface AppOptions {
   db: Db;
@@ -12,6 +13,7 @@ export function buildApp({ db, logger = true }: AppOptions): FastifyInstance {
   const app = Fastify({ logger });
 
   registerHealth(app, db);
+  registerMetrics(app, db);
 
   return app;
 }
