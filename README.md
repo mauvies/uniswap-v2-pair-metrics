@@ -39,7 +39,7 @@ Everything runs from the repo root. Nothing needs a database started by hand —
 that need one bring it up.
 
 ```sh
-pnpm test          # all tests; ingest's start the database and migrate it first
+pnpm test          # all tests; the database is started and migrated first
 pnpm check         # lint and format
 pnpm typecheck
 pnpm ingest        # one ingest run
@@ -48,7 +48,7 @@ pnpm api           # the metrics service on http://127.0.0.1:3000
 pnpm db:up         # Postgres 17 on localhost:5432
 pnpm db:down       # stop it; `pnpm db:down -v` drops the data with it
 pnpm db:migrate    # apply migrations, starting the database if it is down
-pnpm db:reset      # drop everything and migrate from scratch
+pnpm db:reset      # delete the volume with every row in it, then migrate from scratch
 pnpm db:generate   # regenerate after editing packages/shared/src/db/schema.ts
 ```
 
@@ -69,11 +69,11 @@ pnpm ingest                      # on the host, against localhost
 docker compose run --rm ingest   # in a container, against the compose network
 ```
 
-The container path starts the database and waits until it is healthy, and builds the image
-the first time. It does not migrate: run `pnpm db:migrate` once before the first ingest,
-whichever way you run it. Without the table both pairs fail and the run exits `1`. The image
-holds a copy of the source, so rebuild it with `docker compose build ingest` after editing
-`packages/ingest` or `packages/shared`.
+`pnpm ingest` migrates first, so it works on a fresh clone. The container path starts the
+database and waits until it is healthy, and builds the image the first time, but it does
+**not** migrate — run `pnpm db:migrate` once before the first containerised run, or both
+pairs fail and it exits `1`. The image holds a copy of the source, so rebuild it with
+`docker compose build ingest` after editing `packages/ingest` or `packages/shared`.
 
 Schedule either with `15 * * * *`, not on the hour: hours are stored once they clear a
 15-minute finality margin, so an on-the-hour run would always find the newest hour too
@@ -101,13 +101,17 @@ Set `PORT` or `HOST` in `.env` to move it. It binds loopback by default.
 
 `shared`'s are pure and run anywhere. Ingest's and the API's write to a real Postgres,
 because the transaction and conflict behaviour `docs/DESIGN.md` §8 promises cannot be
-pinned against a fake — so they start the database themselves, and CI runs the same command.
+pinned against a fake. `pnpm test` starts and migrates the database once, then runs the
+packages one at a time — CI runs that same command.
+
+Both database suites share the one table and empty it between tests, which is why the fan-out
+is sequential: in parallel they would clear the table under each other's assertions. Re-run
+`pnpm ingest` afterwards if you wanted the data back.
 
 That makes `pnpm test` slower than a pure suite and gives it new ways to fail: Docker not
 running, or port 5432 taken. `pnpm --filter @uniswap-v2-pair-metrics/shared test` is the
-Docker-free path. Both database suites share the one table and empty it between tests, so
-the root script runs packages one at a time — in parallel they would clear the table under
-each other's assertions. Re-run `pnpm ingest` afterwards if you wanted the data back.
+Docker-free path. The other two filtered commands run `vitest` alone and expect a database
+already migrated; they fail naming the command that fixes it.
 
 ## Docs
 

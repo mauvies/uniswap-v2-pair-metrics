@@ -101,7 +101,7 @@ pnpm db:up          # Postgres 17 on localhost:5432
 pnpm db:down
 pnpm db:migrate     # db:generate after editing schema.ts
 pnpm ingest         # one ingest run
-pnpm test           # ingest's tests start the database and migrate it first
+pnpm test           # starts and migrates the database, then runs packages one at a time
 pnpm check          # Biome: lint and format
 pnpm typecheck
 

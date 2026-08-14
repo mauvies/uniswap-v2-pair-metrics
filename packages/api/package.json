@@ -6,18 +6,16 @@
   "scripts": {
     "start": "node --env-file-if-exists=../../.env src/main.ts",
     "typecheck": "tsc --noEmit",
-    "test": "pnpm -w run db:up && pnpm -w run db:migrate && vitest run"
+    "test": "vitest run"
   },
   "dependencies": {
     "@uniswap-v2-pair-metrics/shared": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "fastify": "^5.12.0",
-    "pg": "^8.23.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
-    "@types/pg": "^8.21.0",
     "vitest": "^3.2.7"
   }
 }
