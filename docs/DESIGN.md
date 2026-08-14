@@ -425,6 +425,11 @@ GET /health
   inventing an age — the seconds since 2022 — would read as a three-year outage. On this
   deployment the dead pair is null by design (§1); null on the active pair means ingest has
   never written it, which is the condition worth alarming on.
+- **`/health` answers `503` once the database is unreachable** — `ok: false`, `db: false`,
+  no pairs — so a monitor reading the status code alone never sees `200` while every read is
+  failing. When it does answer `200`, `ageSeconds` counts from the *end* of the last stored
+  hour, the reference the ingest guard measures from (§5.1), so the two cannot disagree
+  about what stale means.
 
 **Interpretation:** the brief asks for a service that, "based on a given pair address and a
 date range, retrieves the metrics". We serve only the two configured pairs and answer `404`

@@ -43,6 +43,7 @@ pnpm test          # all tests; ingest's start the database and migrate it first
 pnpm check         # lint and format
 pnpm typecheck
 pnpm ingest        # one ingest run
+pnpm api           # the metrics service on http://127.0.0.1:3000
 
 pnpm db:up         # Postgres 17 on localhost:5432
 pnpm db:down       # stop it; `pnpm db:down -v` drops the data with it
@@ -82,16 +83,31 @@ Exit codes: `0` collected or nothing to do, `1` at least one pair failed and the
 committed, `2` aborted before any was attempted. One JSON line per event to stdout, errors
 to stderr.
 
+## API
+
+```sh
+pnpm api
+```
+
+`GET /health` reports whether the database is reachable and how old each pair's newest
+stored hour is, counted from the end of that hour — the same reference the ingest guard
+measures staleness from (`docs/DESIGN.md` §5.1). A pair with no rows reports `null` for
+both: that is the dead pair's steady state, not a fault. With the database down the endpoint
+answers `503`, and it recovers on its own once the database is back — no restart.
+
+Set `PORT` or `HOST` in `.env` to move it. It binds loopback by default.
+
 ## Tests
 
-`shared`'s are pure and run anywhere. Ingest's write to a real Postgres, because the
-transaction and conflict behaviour `docs/DESIGN.md` §8 promises cannot be pinned against a
-fake — so they start the database themselves, and CI runs the same command.
+`shared`'s are pure and run anywhere. Ingest's and the API's write to a real Postgres,
+because the transaction and conflict behaviour `docs/DESIGN.md` §8 promises cannot be
+pinned against a fake — so they start the database themselves, and CI runs the same command.
 
 That makes `pnpm test` slower than a pure suite and gives it new ways to fail: Docker not
 running, or port 5432 taken. `pnpm --filter @uniswap-v2-pair-metrics/shared test` is the
-Docker-free path. And ingest's tests empty the table, so re-run `pnpm ingest` if you wanted
-the data back.
+Docker-free path. Both database suites share the one table and empty it between tests, so
+the root script runs packages one at a time — in parallel they would clear the table under
+each other's assertions. Re-run `pnpm ingest` afterwards if you wanted the data back.
 
 ## Docs
 
