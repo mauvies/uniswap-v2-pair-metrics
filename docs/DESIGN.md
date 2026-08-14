@@ -180,6 +180,14 @@ answers "how do we talk to Postgres", separate from the domain code the barrel e
 `./schema` and `./db` still name two files there, never a folder index: an index re-exporting
 both would drag the schema back through `./db`.
 
+A third subpath, `./test-helpers`, holds what ingest's and the API's database tests turned
+out to need identically — `testPool`, `assertReachable`, and the two configured pair
+addresses under the names the tests read by. Each package keeps its own gateway stubs or
+row fixtures locally; only the parts that were already the same file twice moved. The
+filename ends `.test-helpers.ts` for the same reason it does in ingest and the API: vitest
+never collects it as a suite, and `.dockerignore`'s `**/*.test-helpers.ts` keeps it, and
+what it pulls in, out of both container images.
+
 **Node 24 or newer, and the version is load-bearing.** Native type stripping runs `.ts`
 files with no transpiler, so no application code is transpiled and there is no `tsx`
 dependency of ours — `drizzle-kit` bundles one to read its own config, which runs only at

@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./schema": "./src/db/schema.ts",
-    "./db": "./src/db/connection.ts"
+    "./db": "./src/db/connection.ts",
+    "./test-helpers": "./src/db/support.test-helpers.ts"
   },
   "scripts": {
     "db:generate": "drizzle-kit generate",

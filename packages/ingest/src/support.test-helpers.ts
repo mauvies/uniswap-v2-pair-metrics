@@ -1,26 +1,7 @@
-import { HOUR_SECONDS, PAIRS } from "@uniswap-v2-pair-metrics/shared";
-import type { Pool } from "pg";
-import { loadConfig } from "./config.ts";
-import { createPool } from "./db/index.ts";
+import { HOUR_SECONDS } from "@uniswap-v2-pair-metrics/shared";
+import { HOUR } from "@uniswap-v2-pair-metrics/shared/test-helpers";
 import { createGateway } from "./gateway/index.ts";
 import type { LogLine } from "./log.ts";
-
-/** By symbol rather than by index: a reordered PAIRS must not silently retarget a test. */
-function addressOf(symbols: string): string {
-  const pair = PAIRS.find((p) => `${p.token0Symbol}/${p.token1Symbol}` === symbols);
-
-  if (pair === undefined) {
-    throw new Error(`${symbols} is not in PAIRS`);
-  }
-
-  return pair.address;
-}
-
-export const ACTIVE = addressOf("USDC/WETH");
-export const DEAD = addressOf("WETH/RKFL");
-
-/** 2026-08-12 09:00:00 UTC, hour-aligned. */
-export const HOUR = 1_786_525_200;
 
 /**
  * A wall clock four hours past HOUR, and the upper bound it produces: the margin eats the
@@ -29,32 +10,6 @@ export const HOUR = 1_786_525_200;
 export const NOW = HOUR + 4 * HOUR_SECONDS;
 export const CURRENT_HOUR = HOUR + 3 * HOUR_SECONDS;
 export const BACKFILL_FROM = CURRENT_HOUR - 48 * HOUR_SECONDS;
-
-/**
- * Ingest's own env validation, with the gateway key stubbed: these tests reach the database
- * but never the gateway, and `loadConfig` demands both.
- */
-export function testPool(): Pool {
-  return createPool(loadConfig({ ...process.env, THEGRAPH_API_KEY: "test" }).databaseUrl);
-}
-
-/**
- * The driver's own failure is `Failed query: delete from "pair_hour_metrics"`, which says
- * nothing about the database being down or how to start it.
- */
-export async function assertReachable(pool: Pool): Promise<void> {
-  try {
-    const client = await pool.connect();
-    client.release();
-  } catch (cause) {
-    throw new Error(
-      "cannot reach the database these tests need. Start it and apply the schema:\n" +
-        "  docker compose up -d db\n" +
-        "  pnpm db:migrate",
-      { cause },
-    );
-  }
-}
 
 export interface WireHour {
   hourStartUnix: number;
