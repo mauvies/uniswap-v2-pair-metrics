@@ -14,12 +14,13 @@ export interface RunOptions {
 
 export type PairOutcome =
   | { pair: string; kind: "skipped" }
+  | { pair: string; kind: "empty" }
   | { pair: string; kind: "written"; attempted: number; written: number }
   | { pair: string; kind: "failed"; reason: string };
 
 export interface RunSummary {
-  aborted?: string;
   pairs: PairOutcome[];
+  aborted?: string;
 }
 
 export const EXIT_OK = 0;
@@ -89,6 +90,13 @@ async function ingestPair(
     }
 
     const hours = await gateway.pairHours(address, from, currentHour);
+
+    if (hours.length === 0) {
+      log({ level: "info", event: "pair.empty", pair: address, from, to: currentHour });
+
+      return { pair: address, kind: "empty" };
+    }
+
     const rows = hours.map((hour) => toInsertRow(address, hour));
     const written = await insertHours(db, rows);
 

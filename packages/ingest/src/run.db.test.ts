@@ -49,6 +49,14 @@ describe("run", () => {
     expect(await storedHours(DEAD)).toEqual([]);
     expect(exitCodeFor(summary)).toBe(0);
     expect(lines.filter((line) => line.level === "error")).toEqual([]);
+    expect(summary.pairs).toContainEqual({ pair: DEAD, kind: "empty" });
+    expect(lines).toContainEqual({
+      level: "info",
+      event: "pair.empty",
+      pair: DEAD,
+      from: BACKFILL_FROM,
+      to: CURRENT_HOUR,
+    });
   });
 
   it("missing _meta aborts the run, writes nothing", async () => {
