@@ -8,6 +8,6 @@ docs
 .env
 .env.*
 
-# Test source would ship without a runner: the image installs production dependencies only.
+# Test source would ship without a runner: the images install production dependencies only.
 **/*.test.ts
 **/*.test-helpers.ts

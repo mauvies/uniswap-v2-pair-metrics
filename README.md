@@ -107,7 +107,25 @@ measures staleness from (`docs/DESIGN.md` §5.1). A pair with no rows reports `n
 both: that is the dead pair's steady state, not a fault. With the database down the endpoint
 answers `503`, and it recovers on its own once the database is back — no restart.
 
-Set `PORT` or `HOST` in `.env` to move it. It binds loopback by default.
+Two ways to run it, one entry point:
+
+```sh
+pnpm api                          # on the host, against localhost
+docker compose up -d --wait api   # in a container, against the compose network
+```
+
+`pnpm api` migrates first, so it works on a fresh clone. The container path starts the
+database and waits until it is healthy, and builds the image the first time, but it does
+**not** migrate — run `pnpm db:migrate` once before the first containerised run, or the
+healthcheck never passes, `--wait` gives up and every read answers `503`. Migrating afterwards
+recovers it within one check, but `--wait` fails fast against a container already marked
+unhealthy, so run it again to see it. The image holds a copy of the source, so rebuild it with
+`docker compose build api` after editing `packages/api` or `packages/shared`.
+
+Either way it answers on `http://127.0.0.1:3000`, the address the dashboard's proxy targets,
+so `pnpm web` works against both — but only one of them can hold the port at a time. Set
+`PORT` in `.env` to move it; the published port follows and the container keeps 3000 inside.
+`HOST` moves the host-run service only, and binds loopback by default.
 
 ## Dashboard
 

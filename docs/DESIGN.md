@@ -156,8 +156,8 @@ packages/
 itself.
 
 **Nothing compiles across package boundaries.** `shared` is consumed as TypeScript source:
-its `exports` names `src/index.ts` and it emits nothing. Consumers bundle it instead —
-esbuild for the API's container image, Vite for the web app — so `tsc` is a typechecker
+its `exports` names `src/index.ts` and it emits nothing. Vite bundles it for the web app; the
+container images copy the source and Node type-strips it — so `tsc` is a typechecker
 everywhere in this repo and never a build step. That is what keeps build ordering out of a
 workspace with no orchestrator: no package has to be built before another can compile.
 

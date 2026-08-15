@@ -2,36 +2,25 @@ name: uniswap-v2-pair-metrics
 
 services:
   db:
-    # Pinned to a major; nothing here needs a newer Postgres.
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      # Local development credentials, not secrets: the port is bound to
-      # localhost and the database holds public subgraph data. A deployment
-      # supplies these through the environment instead.
       POSTGRES_USER: ${POSTGRES_USER:-uniswap}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-uniswap}
       POSTGRES_DB: ${POSTGRES_DB:-uniswap_v2_pair_metrics}
     ports:
-      # Overridable so it does not collide with a Postgres already on 5432.
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
-      # Services added later gate on this with `condition: service_healthy`,
-      # so ingest never opens a connection before the server accepts them.
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-uniswap} -d ${POSTGRES_DB:-uniswap_v2_pair_metrics}" ]
       interval: 5s
       timeout: 5s
       retries: 10
       start_period: 10s
 
-  # One-shot, not a daemon: `docker compose run --rm ingest` per §5.5. Behind a profile so
-  # `docker compose up` starts only the database.
   ingest:
     profiles: [ ingest ]
-    # Exits non-zero by design when a pair fails, and heals on the next invocation (§5.5).
-    # Restarting it would turn a scheduled one-shot into a crash loop.
     restart: "no"
     build:
       context: .
@@ -39,6 +28,27 @@ services:
     environment:
       THEGRAPH_API_KEY: ${THEGRAPH_API_KEY}
       DATABASE_URL: postgres://${POSTGRES_USER:-uniswap}:${POSTGRES_PASSWORD:-uniswap}@db:5432/${POSTGRES_DB:-uniswap_v2_pair_metrics}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    restart: unless-stopped
+    init: true
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile
+    environment:
+      HOST: 0.0.0.0
+      DATABASE_URL: postgres://${POSTGRES_USER:-uniswap}:${POSTGRES_PASSWORD:-uniswap}@db:5432/${POSTGRES_DB:-uniswap_v2_pair_metrics}
+    ports:
+      - "127.0.0.1:${PORT:-3000}:3000"
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
     depends_on:
       db:
         condition: service_healthy
