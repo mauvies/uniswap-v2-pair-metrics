@@ -38,7 +38,7 @@ Everything runs from the repo root. Nothing needs a database started by hand —
 that need one bring it up.
 
 ```sh
-pnpm test          # all tests; the database is started and migrated first
+pnpm test          # all tests, against a database of their own
 pnpm check         # lint and format
 pnpm typecheck
 pnpm ingest        # one ingest run
@@ -52,9 +52,11 @@ pnpm db:reset      # delete the volume with every row in it, then migrate from s
 pnpm db:generate   # regenerate after editing packages/shared/src/db/schema.ts
 ```
 
-Set `POSTGRES_PORT` in `.env` if 5432 is taken; the container, the migrations and ingest
-all read it. Credentials default to `uniswap` / `uniswap` / `uniswap_v2_pair_metrics`,
-local only.
+Export `POSTGRES_PORT` if 5432 is taken; the container, the migrations, the tests and the
+services all read it. `.env` is not enough for that one — compose and the two services read
+it, but the migrations and the tests do not, so a port set only there moves the container
+out from under them. Credentials default to `uniswap` / `uniswap` /
+`uniswap_v2_pair_metrics`, local only.
 
 ## Ingest
 
@@ -129,19 +131,15 @@ are hardcoded.
 
 ## Tests
 
-`shared`'s are pure and run anywhere. Ingest's and the API's write to a real Postgres,
-because the transaction and conflict behaviour `docs/DESIGN.md` §8 promises cannot be
-pinned against a fake. `pnpm test` starts and migrates the database once, then runs the
-packages one at a time — CI runs that same command.
+```sh
+pnpm test          # everything
+pnpm --filter @uniswap-v2-pair-metrics/shared test    # the Docker-free subset
+```
 
-Both database suites share the one table and empty it between tests, which is why the fan-out
-is sequential: in parallel they would clear the table under each other's assertions. Re-run
-`pnpm ingest` afterwards if you wanted the data back.
-
-That makes `pnpm test` slower than a pure suite and gives it new ways to fail: Docker not
-running, or port 5432 taken. `pnpm --filter @uniswap-v2-pair-metrics/shared test` is the
-Docker-free path. The other two filtered commands run `vitest` alone and expect a database
-already migrated; they fail naming the command that fixes it.
+`shared`'s tests are pure. Ingest's and the API's write to a real Postgres, because the
+transaction and conflict behaviour `docs/DESIGN.md` §8 promises cannot be pinned against a
+fake. They empty the table between tests, so they run against a database of their own that
+`pnpm test` creates and migrates — development data is never touched.
 
 ## Docs
 

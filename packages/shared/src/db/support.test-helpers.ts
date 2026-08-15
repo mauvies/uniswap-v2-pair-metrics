@@ -20,23 +20,27 @@ export const DEAD = addressOf("WETH/RKFL");
 /** 2026-08-12 09:00:00 UTC, hour-aligned. */
 export const HOUR = 1_786_525_200;
 
-/** Straight off `databaseUrl`, not a service's `loadConfig` — a db test needs no gateway key. */
+/**
+ * Not read from `POSTGRES_DB`: a filtered `pnpm --filter … test` inherits nothing from
+ * `scripts/test.sh`, which takes the name from here to create and migrate it.
+ */
+export const TEST_DATABASE = "uniswap_v2_pair_metrics_test";
+
 export function testPool(): Pool {
-  return createPool(databaseUrl(process.env));
+  return createPool(
+    databaseUrl({ ...process.env, DATABASE_URL: undefined, POSTGRES_DB: TEST_DATABASE }),
+  );
 }
 
-/**
- * The driver's own failure is `Failed query: delete from "pair_hour_metrics"`, which says
- * nothing about the database being down or how to start it.
- */
 export async function assertReachable(pool: Pool): Promise<void> {
   try {
     const client = await pool.connect();
     client.release();
   } catch (cause) {
     throw new Error(
-      "cannot reach the database these tests need. Start it and apply the schema:\n" +
-        "  pnpm db:migrate",
+      `cannot reach ${TEST_DATABASE}. One command starts Postgres, creates it and applies\n` +
+        "the schema; after it has run once, filtered test commands work on their own:\n" +
+        "  pnpm test",
       { cause },
     );
   }
