@@ -113,8 +113,19 @@ Set `PORT` or `HOST` in `.env` to move it. It binds loopback by default.
 pnpm web
 ```
 
-Vite serves it on http://localhost:4000, or the next free port if that one is taken. It
-needs neither the database nor the API yet.
+Vite serves it on http://localhost:4000, or the next free port if that one is taken.
+
+The chart reads the metrics service through the dev server's proxy, so the API has to be
+running alongside it and the table has to hold at least one ingested hour:
+
+```sh
+pnpm ingest    # once, if the table is empty
+pnpm api       # one terminal
+pnpm web       # another
+```
+
+Without the API the chart is empty and the rest of the page still renders — the metric cards
+are hardcoded.
 
 ## Tests
 

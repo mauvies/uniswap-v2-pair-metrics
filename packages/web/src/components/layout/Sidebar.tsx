@@ -18,7 +18,7 @@ const NAV = [
 
 export function Sidebar() {
   return (
-    <aside className="hidden w-[63px] shrink-0 flex-col items-center border-r border-border bg-surface md:flex">
+    <aside className="sticky top-0 hidden h-dvh w-[63px] shrink-0 flex-col items-center border-r border-border bg-surface md:flex">
       <div className="pt-[20px] text-primary">
         <Logo />
       </div>

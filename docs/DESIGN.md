@@ -517,6 +517,15 @@ hooks over classes "where possible", and nothing here needs a class. TanStack Qu
 fetching, keyed on `(pair, from, to)`. Tailwind v4 with a CSS-first `@theme` built from
 values extracted from the Figma; those values and the icon set ship with the package.
 
+**The browser reaches the API through the Vite dev server's proxy**, which forwards `/api`
+to the service on loopback. So the client carries no base URL, the API needs no CORS
+configuration and no allowed-origin list, and the two processes stay one origin as far as
+the browser is concerned. Rejected: `@fastify/cors`, which adds a config surface to a service
+that has none, and serving the built SPA from Fastify, which would couple the API to a web
+build and break §3's "nothing compiles across package boundaries". The cost is that a
+deployed SPA needs a reverse proxy or CORS in front of it — a deployment concern rather than
+a build one, and §10's.
+
 **Three inconsistencies in the source are reproduced rather than normalised**, because the
 brief asks for pixel fidelity and silently tidying a design is not our call. The Figma uses
 three near-identical blues — `#2E71F0`, `#2467E8`, `#4A90E2` — where a system would use one,
@@ -548,8 +557,13 @@ features/performance   PerformanceCard, AprChart, ChartTooltip, ChartEmptyState
 linear interpolation — nothing that needs hand-rolled SVG. Legend and controls are plain
 DOM rather than chart primitives: the Figma fixes their spacing and type exactly, and that
 is more direct to match in markup than through a library's layout props.
-`connectNulls={false}`, so warm-up nulls (§2.4) render as a shorter line rather than an
-invented one.
+`connectNulls={false}`, so nulls render as a shorter line rather than an invented one.
+Leading and trailing warm-up nulls are trimmed from the plotted series instead: a request
+with no bounds starts at `first_stored_hour`, where the first N−1 hours can never fill their
+window (§2.4), and drawing them would spend a fifth of the plot on empty axis. Nulls inside
+the series stay gaps, because a hole there is a fact about the data rather than an artefact
+of where the range begins. The chart fills the height its container gives it, so the plot
+area is sized in one place.
 
 **Three selectors, one `PillGroup`, one control row:** date range, moving-average window
 (1/12/24h), and pair. The Figma has only the range row; the other two reuse its styling in
@@ -570,7 +584,8 @@ availability from stored extent is §10.
 **Responsive.** The Figma defines a single 1440px frame, so every breakpoint is ours: metric
 grids collapse 5/4 → 2 → 1 at `xl` and `sm`, the sidebar hides below `md`, the control row
 wraps, and the
-chart keeps a fixed height with fluid width. Page padding is 42px against the 63px sidebar,
+chart keeps a fixed height with fluid width, insetting its series 30px from each end of the
+x axis so the first and last points are not flush against the plot edge. Page padding is 42px against the 63px sidebar,
 putting content at x=105 with the section titles and the header title rather than at the
 design's x=104 — a 1px inconsistency in a hand-placed frame, and alignment is worth more
 than reproducing it. Below `md` it drops to 16px, the design's own card padding rather than
@@ -583,10 +598,12 @@ leaves the whitespace to its right that the frame draws; below that the tracks d
 width evenly and the cards fill them, which is what makes the one- and two-across layouts
 usable on a phone.
 
-Below `md` the header sticks to the top of the viewport rather than scrolling away with the
-content. With the sidebar hidden it is the only navigation on screen, and the collapsed
-search trigger lives in it; scrolling a long series to reach either would be worse than the
-64px it costs. Above `md` the sidebar is always visible, so the header scrolls normally.
+**The header and the sidebar both stick to the viewport**, at every width. The sidebar is
+`100dvh` rather than stretching to the content, so its bottom group — notifications and the
+account button — stays where the design puts it instead of drifting down as the page grows.
+Nothing in the chrome is worth scrolling past to reach: below `md` the header carries the
+only navigation on screen and the collapsed search trigger, and above it the two together
+are the whole frame the content sits in.
 
 Below `md` the header's search field collapses to its icon and expands back over the whole
 bar when tapped, with a dismiss control returning it to the icon. Side by side, the 351px
