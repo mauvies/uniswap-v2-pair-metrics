@@ -3,7 +3,7 @@ import { Download, Expand, HelpCircle, MoreVertical, Share } from "../../compone
 import { Card } from "../../components/ui/Card.tsx";
 import { IconButton } from "../../components/ui/IconButton.tsx";
 import { SectionHeading } from "../../components/ui/SectionHeading.tsx";
-import { AprChart } from "./AprChart.tsx";
+import { ChartArea } from "./ChartArea.tsx";
 import { usePairMetrics } from "./usePairMetrics.ts";
 
 /**
@@ -17,7 +17,7 @@ export function PerformanceCard() {
     throw new Error("shared exports no pairs");
   }
 
-  const { points } = usePairMetrics(PAIR.address);
+  const { points, isPending, isError } = usePairMetrics(PAIR.address);
 
   return (
     <section>
@@ -63,7 +63,12 @@ export function PerformanceCard() {
           </div>
 
           <div className="h-[334px] mt-[40px]">
-            {points === undefined ? null : <AprChart points={points} aprWindow={WINDOW_HOURS} />}
+            <ChartArea
+              points={points}
+              isPending={isPending}
+              isError={isError}
+              aprWindow={WINDOW_HOURS}
+            />
           </div>
         </div>
       </Card>

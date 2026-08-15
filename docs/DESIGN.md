@@ -550,7 +550,8 @@ components/layout      AppShell, Sidebar, TopBar
 components/ui          Card, MetricCard, PillGroup, IconButton, SectionHeading
 components/icons       13 glyphs exported from the Figma as inline SVG
 features/metrics       GlobalMetrics, AnnualizedReturns   — hardcoded, as Sentora allows
-features/performance   PerformanceCard, AprChart, ChartTooltip, ChartEmptyState
+features/performance   PerformanceCard, AprChart, ChartTooltip, toAprSeries, usePairMetrics
+  chartStates/         ChartSkeleton, ChartError, ChartEmptyState
 ```
 
 **Chart: Recharts.** The design is one line series with horizontal gridlines, hollow dots and
@@ -612,10 +613,21 @@ things instead of one whole one. The dismiss glyph is ours, since a design with 
 state has nothing to dismiss.
 
 **States the design does not define** — loading, error, empty — occupy the plot area at its
-fixed height, so switching pairs causes no layout shift. The card keeps its full chrome in
+fixed height, so switching pairs causes no layout shift. Loading is a block filling that area
+with a spinner in it rather than a centred line of text: the block occupies the box the chart
+will occupy, so the arriving series replaces it in place instead of the page appearing to
+jump. The card keeps its full chrome in
 all three: header, legend and every selector stay interactive, so returning from the empty
 pair needs no reload. The empty state is designed rather than generic — it names what is
 absent and why, since a pair with no rows is a real state of this system, not a failure.
+
+**There are two empty states, not one**, and they are told apart because they mean different
+things. A pair with no stored rows has never traded in the window we collect — the dead
+pair's steady state (§1). A pair whose every stored hour still falls inside the first N−1 of
+its window has data and simply cannot be averaged yet (§2.4). Both draw an empty plot, so
+only the copy separates them, and the second is the one that reads as breakage: it looks
+identical to a service that returned nothing. Pinned by `empty state renders` and
+`names warm-up apart from a pair with no rows`.
 
 ---
 

@@ -1,4 +1,3 @@
-import type { AprWindow, MetricPoint } from "@uniswap-v2-pair-metrics/shared";
 import {
   CartesianGrid,
   Line,
@@ -9,17 +8,14 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { toAprSeries } from "./aprSeries.ts";
+import type { AprSeries } from "./aprSeries.ts";
 import { ChartTooltip } from "./ChartTooltip.tsx";
 
 interface AprChartProps {
-  points: readonly MetricPoint[];
-  aprWindow: AprWindow;
+  series: AprSeries;
 }
 
-export function AprChart({ points, aprWindow }: AprChartProps) {
-  const { data, ticks } = toAprSeries(points, aprWindow);
-
+export function AprChart({ series: { data, ticks } }: AprChartProps) {
   return (
     <ResponsiveContainer width="100%" height="100%">
       <LineChart data={data}>

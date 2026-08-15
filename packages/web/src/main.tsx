@@ -16,7 +16,14 @@ if (root === null) {
   throw new Error("index.html has no #root element");
 }
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      networkMode: "always",
+      retry: false,
+    },
+  },
+});
 
 createRoot(root).render(
   <StrictMode>
