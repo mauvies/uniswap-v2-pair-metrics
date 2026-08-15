@@ -7,15 +7,11 @@ import { PillGroup, type PillOption } from "../../components/ui/PillGroup.tsx";
 import { SectionHeading } from "../../components/ui/SectionHeading.tsx";
 import { ChartArea } from "./ChartArea.tsx";
 import { HeaderActions } from "./HeaderActions.tsx";
+import { PairSelect } from "./PairSelect.tsx";
 import { RANGE_OPTIONS, type RangeKey, rangeFrom } from "./ranges.ts";
 import { usePairMetrics } from "./usePairMetrics.ts";
 
 const DEFAULT_PAIR = PAIRS[0];
-
-const PAIR_OPTIONS: readonly PillOption<string>[] = PAIRS.map((pair) => ({
-  value: pair.address,
-  label: `${pair.token0Symbol}/${pair.token1Symbol}`,
-}));
 
 const WINDOW_OPTIONS: readonly PillOption<AprWindow>[] = APR_WINDOWS.map((hours) => ({
   value: hours,
@@ -37,23 +33,12 @@ export function PerformanceCard() {
       <SectionHeading>Performance</SectionHeading>
 
       <Card className="mt-[10px] ">
-        <div className="flex flex-wrap items-center justify-between gap-[10px] p-[16px]">
+        <div className="flex items-center justify-between gap-[10px] p-[16px]">
           <div className="flex items-center gap-[4px]">
-            <h3 className="text-[15px] leading-[23px] font-medium text-ink">
-              {pair.token0Symbol}/{pair.token1Symbol}
-            </h3>
+            <PairSelect address={pair.address} onChange={setAddress} />
             <IconButton label="About this chart">
               <HelpCircle />
             </IconButton>
-          </div>
-
-          <div className="order-last flex w-full justify-center md:order-none md:w-auto md:flex-1">
-            <PillGroup
-              label="Pair"
-              options={PAIR_OPTIONS}
-              value={pair.address}
-              onChange={setAddress}
-            />
           </div>
 
           <HeaderActions />
@@ -62,7 +47,7 @@ export function PerformanceCard() {
         <hr className="border-0 border-t border-divider" />
 
         <div className="pt-[15px] pr-[30px] pb-[30px]  pl-[16px]">
-          <div className="flex items-center gap-[6px] ">
+          <div className="flex items-center gap-[6px]">
             <span
               aria-hidden="true"
               className="size-[9px] shrink-0 rounded-full bg-accent-legend"
@@ -72,17 +57,17 @@ export function PerformanceCard() {
 
           <div className="mt-[14px] flex flex-wrap items-center justify-between gap-[10px]">
             <PillGroup
-              label="Date range"
-              options={RANGE_OPTIONS}
-              value={range}
-              onChange={setRange}
-            />
-
-            <PillGroup
               label="Moving average"
               options={WINDOW_OPTIONS}
               value={aprWindow}
               onChange={setAprWindow}
+            />
+
+            <PillGroup
+              label="Date range"
+              options={RANGE_OPTIONS}
+              value={range}
+              onChange={setRange}
             />
           </div>
 

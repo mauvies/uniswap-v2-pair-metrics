@@ -15,6 +15,7 @@ export function SearchField({ ref, onEscape }: SearchFieldProps) {
       <input
         ref={ref}
         type="search"
+        name="search"
         aria-label="Search"
         placeholder="Search..."
         onKeyDown={(event) => {

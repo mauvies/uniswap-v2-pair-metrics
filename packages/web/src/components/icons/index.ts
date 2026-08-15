@@ -1,3 +1,4 @@
+export { ChevronDown } from "./ChevronDown.tsx";
 export { Close } from "./Close.tsx";
 export { Download } from "./Download.tsx";
 export { Expand } from "./Expand.tsx";
