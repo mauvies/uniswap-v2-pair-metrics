@@ -9,8 +9,10 @@
   },
   "packageManager": "pnpm@10.30.3",
   "scripts": {
+    "dev": "pnpm ingest; docker compose up -d --wait api && pnpm web",
+    "down": "docker compose down",
     "db:up": "docker compose up -d --wait db",
-    "db:down": "docker compose down",
+    "db:down": "docker compose down db",
     "db:generate": "pnpm --filter @uniswap-v2-pair-metrics/shared db:generate",
     "db:migrate": "pnpm db:up && pnpm --filter @uniswap-v2-pair-metrics/shared db:migrate",
     "db:reset": "docker compose down -v && pnpm db:migrate",

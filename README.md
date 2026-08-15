@@ -38,6 +38,9 @@ Everything runs from the repo root. Nothing needs a database started by hand —
 that need one bring it up.
 
 ```sh
+pnpm dev           # the whole stack: one ingest run, the API, the dashboard
+pnpm down          # stop the containers it left running
+
 pnpm test          # all tests, against a database of their own
 pnpm check         # lint and format
 pnpm typecheck
@@ -87,10 +90,6 @@ to stderr.
 
 ## API
 
-```sh
-pnpm api
-```
-
 `GET /pairs/:address/metrics?from=<ISO-8601>&to=<ISO-8601>` returns every stored metric for
 one pair over a range, plus APR over 1, 12 and 24 hours at each point. Both bounds are
 optional and inclusive, floored to their hour; omit them to get everything stored. Hours the
@@ -136,7 +135,17 @@ pnpm web
 Vite serves it on http://localhost:4000, or the next free port if that one is taken.
 
 The chart reads the metrics service through the dev server's proxy, so the API has to be
-running alongside it and the table has to hold at least one ingested hour:
+running alongside it and the table has to hold at least one ingested hour. `pnpm dev` arranges
+all three from one terminal — it ingests once, starts the API in its container, and leaves
+Vite in the foreground:
+
+```sh
+pnpm dev       # from a clone: ingest, API, dashboard
+pnpm down      # the containers outlive the dashboard; this stops them
+```
+
+It needs port 3000 free, so stop a host-run `pnpm api` first. The three commands underneath it
+are still the way to run the API on the host, or to restart one piece without the others:
 
 ```sh
 pnpm ingest    # once, if the table is empty
