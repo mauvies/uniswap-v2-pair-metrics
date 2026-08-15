@@ -5,8 +5,12 @@ import type { Pair } from "./types.ts";
  * subgraph on 2026-08-12, never re-checked at runtime (§8).
  *
  * WETH/RKFL is dead since 2022-11-29 and belongs here on purpose (§1) — not an oversight.
+ *
+ * Typed non-empty so `PAIRS[0]` is a `Pair` rather than a maybe. The list is fixed here, so
+ * a caller wanting a default pair should not have to write a runtime check for a case the
+ * file makes impossible.
  */
-export const PAIRS: readonly Pair[] = [
+export const PAIRS: readonly [Pair, ...Pair[]] = [
   {
     address: "0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc",
     token0Symbol: "USDC",
@@ -19,7 +23,6 @@ export const PAIRS: readonly Pair[] = [
   },
 ] as const;
 
-/** `undefined` for an address we do not collect, which the API answers 404 (§6.1). */
 export function findPair(address: string): Pair | undefined {
   const normalised = address.toLowerCase();
 

@@ -554,21 +554,21 @@ at `first_stored_hour`, where the first N−1 hours can never fill their window 
 inside the series stay gaps, because a hole there is a fact about the data rather than an
 artefact of where the range begins.
 
-**Three selectors, one `PillGroup`, one control row:** date range, moving-average window
-(1/12/24h), and pair. The Figma has only the range row; the other two reuse its styling in
-the same row, whose right half is empty in the design. **The pair selector is our addition**
-— the Figma selects no pairs — and it is not optional: with the empty series an explicitly
-evaluated behaviour (§1), the selector is the only way a reviewer reaches it in the UI.
-Switching the moving-average window never refetches (§6.2).
+**Three selectors, one `PillGroup`.** The Figma has only the range row, so the other two
+reuse its styling: the moving-average window (1/12/24h) fills the right half of that row,
+which the design leaves empty, and the pair sits in the card header beside the title it
+changes. **The pair selector is our addition** — the Figma selects no pairs — and it is not
+optional: with the empty series an explicitly evaluated behaviour (§1), it is the only way a
+reviewer reaches that state in the UI. Switching the window never refetches (§6.2).
 
-**Range options the data cannot support are rendered disabled, not hidden or adaptive.** The
-design offers `7d / 1m / 3m / 6m / 1y / YTD / Custom / All`; a 48-hour backfill supports the
-last two. Which options are supported is a function of how long ingest has been running, so
-that split is correct for a fresh deployment and starts going stale after a week. All eight
-render, to match the design; the rest carry reduced opacity, `cursor: not-allowed`, and a
-title saying they need more history. A control that leads nowhere is worse than one visibly
-unavailable — disabled reads as a data constraint, silently empty reads as a bug. Deriving
-availability from stored extent is §10.
+**The range row is `24h / 2d / All`, not the design's eight.** This reverses an earlier
+decision here, which was to render all of `7d / 1m / 3m / 6m / 1y / YTD / Custom / All` and
+disable the six a 48-hour backfill cannot fill. That argued a control leading nowhere is
+worse than one visibly unavailable — but that is a choice between disabled and hidden, and
+offering only what works is a third option it missed. With it, no pill is dead: `2d` parts
+from `All` once ingest passes its backfill, so all three differ by the third day. The cost is
+a visible departure from the frame a reviewer is holding, which is why it is written here
+rather than left to be discovered. Deriving the options from stored coverage is §10.
 
 **Responsive.** The Figma defines a single 1440px frame, so every breakpoint is ours: metric
 grids collapse 5/4 → 2 → 1, the control row wraps, and the chart keeps a fixed height with
@@ -766,12 +766,13 @@ guarantee this system cannot lose.
 - **Backfill beyond 48 hours.** A longer history would make the wider range selectors
   meaningful and give the 24-hour average a fuller warm-up. Nothing structural changes: the
   fetch already takes any interval (§5.5), and the lower bound is the only constant involved.
-- **Range options derived from stored coverage.** Expose `MIN`/`MAX(hour_start_unix)`
-  alongside the metrics — a `/coverage` route or a response field, neither exists today —
-  and enable each option once that pair's history covers it, so `7d` appears on the seventh
-  day. Per pair, not global. Not built now: with 48 hours of history the derivation yields
-  the same two options every run, so the behaviour would never be observable — but §7's
-  hardcoded split starts going stale after a week of ingest running.
+- **Range options derived from stored coverage**, so `7d` appears on the seventh day, per
+  pair rather than globally. The coverage itself needs no new endpoint: `range` on an
+  unbounded request already *is* the stored extent (§6.1). What blocks it is that a bounded
+  request makes `range` report what was served rather than what exists, so the derivation
+  needs the extent held separately — a second query, or the first unbounded load cached.
+  Until then §7's row is fixed at three options, which stay honest as history grows but stop
+  short of what the data could support.
 - **Design the states the Figma leaves undefined.** Loading, error and empty are invented
   within the design's idiom, and every breakpoint is ours because the Figma fixes a single
   1440px frame (§7). With more time these would be designed, not extrapolated.

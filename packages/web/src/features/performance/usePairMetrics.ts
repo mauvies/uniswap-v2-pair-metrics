@@ -7,18 +7,22 @@ interface UsePairMetrics {
   isError: boolean;
 }
 
-export function usePairMetrics(address: string): UsePairMetrics {
+export function usePairMetrics(address: string, from: string | undefined): UsePairMetrics {
   const { data, isPending, isError } = useQuery({
-    // The range bounds join the key when the range selector does (§7).
-    queryKey: ["pair-metrics", address],
-    queryFn: ({ signal }) => fetchPairMetrics(address, signal),
+    queryKey: ["pair-metrics", address, from ?? null],
+    queryFn: ({ signal }) => fetchPairMetrics(address, from, signal),
   });
 
   return { points: data?.points, isPending, isError };
 }
 
-async function fetchPairMetrics(address: string, signal: AbortSignal): Promise<PairMetrics> {
-  const response = await fetch(`/api/pairs/${address}/metrics`, { signal });
+async function fetchPairMetrics(
+  address: string,
+  from: string | undefined,
+  signal: AbortSignal,
+): Promise<PairMetrics> {
+  const query = from === undefined ? "" : `?from=${encodeURIComponent(from)}`;
+  const response = await fetch(`/api/pairs/${address}/metrics${query}`, { signal });
 
   if (!response.ok) {
     throw new Error(`The metrics service answered ${response.status}`);
