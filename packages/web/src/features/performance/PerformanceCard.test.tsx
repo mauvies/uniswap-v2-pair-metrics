@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { PairMetrics } from "@uniswap-v2-pair-metrics/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PerformanceCard } from "./PerformanceCard.tsx";
@@ -53,6 +53,25 @@ describe("PerformanceCard", () => {
     );
 
     expect(await screen.findByText("No activity recorded")).toBeDefined();
+    expect(screen.getByText(/or its data has not been collected/)).toBeDefined();
+  });
+
+  it("names an empty range apart from a pair with no rows", async () => {
+    renderCard(() =>
+      jsonResponse({
+        pair: { address: "0x0", token0Symbol: "USDC", token1Symbol: "WETH" },
+        range: null,
+        points: [],
+      }),
+    );
+
+    expect(await screen.findByText("No activity recorded")).toBeDefined();
+
+    const ranges = screen.getByRole("group", { name: "Date range" });
+    fireEvent.click(within(ranges).getByRole("button", { name: "24h" }));
+
+    expect(await screen.findByText("Nothing in this range")).toBeDefined();
+    expect(screen.queryByText("No activity recorded")).toBeNull();
   });
 
   it("names warm-up apart from a pair with no rows", async () => {

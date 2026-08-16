@@ -584,12 +584,15 @@ all three: header, legend and every selector stay interactive, so returning from
 pair needs no reload. The empty state is designed rather than generic — it names what is
 absent and why, since a pair with no rows is a real state of this system, not a failure.
 
-**There are two empty states, not one.** A pair with no stored rows has never traded in the
-window we collect — the dead pair's steady state (§1). A pair whose every stored hour still
-falls inside the first N−1 of its window has data and cannot be averaged yet (§2.4). Both
-draw an empty plot, so only the copy separates them, and the second is the one that reads as
-breakage: it looks identical to a service that returned nothing. Pinned by
-`empty state renders` and `names warm-up apart from a pair with no rows`.
+**There are three empty states, not one.** A pair with no stored rows gets copy that names
+both possible causes — never traded in our window, or never ingested — and claims neither,
+because the table cannot tell them apart (the same reason `/health` reports null, §6.1). A
+bounded range that finds nothing gets its own copy: the response is identical to the
+no-rows one, so the client tells them apart by whether its own request carried bounds — an
+unbounded request comes back empty only for a pair with no rows. And a pair whose stored
+hours all fall inside the first N−1 of the window cannot be averaged yet (§2.4). Pinned by
+`empty state renders`, `names an empty range apart from a pair with no rows` and
+`names warm-up apart from a pair with no rows`.
 
 ---
 
@@ -601,6 +604,7 @@ behaviour.
 | Failure | Handling | Test |
 |---|---|---|
 | Pair with no data in the window (WETH/RKFL) | Ingest writes nothing, exits 0; API returns `points: []`; UI shows an empty state | `empty pair → zero writes, exit 0` · `no data → 200 []` · `empty state renders` |
+| A never-ingested database and a bounded range with nothing stored return the same empty response | Told apart by the request's own bounds; the copy claims no cause (§7) | `empty state renders` · `names an empty range apart from a pair with no rows` |
 | Hours with no activity produce no entity | Time-based windows, gaps reconstructed (§2.3) | `apr over gapped series` |
 | `reserveUSD = 0` | APR `null`: return on zero capital is undefined, not infinite (and JSON could not carry `Infinity`/`NaN` anyway) | `zero liquidity → null` |
 | Incomplete window at the start of history | `null`; counts 0/11/23 for N = 1/12/24 | `warm-up null counts` |

@@ -1,17 +1,30 @@
 import { ChartMessage } from "./ChartMessage.tsx";
 
-export function ChartEmptyState({ reason }: { reason: "no-rows" | "warming-up" }) {
+type EmptyReason = "no-rows" | "empty-range" | "warming-up";
+
+const COPY: Record<EmptyReason, { title: string; body: string }> = {
+  "no-rows": {
+    title: "No activity recorded",
+    body: "This pair has no stored history. Either it has not traded in the period we track, or its data has not been collected yet.",
+  },
+  "empty-range": {
+    title: "Nothing in this range",
+    body: "The stored history holds no hours inside this range. The All range shows everything stored.",
+  },
+  "warming-up": {
+    title: "Not enough history yet",
+    body: "Every stored hour still falls inside the first window, so no average can be computed yet. The line appears as soon as one window fills.",
+  },
+};
+
+export function ChartEmptyState({ reason }: { reason: EmptyReason }) {
+  const { title, body } = COPY[reason];
+
   return (
     <ChartMessage>
       <div>
-        <p className="text-ink font-semibold">
-          {reason === "no-rows" ? "No activity recorded" : "Not enough history yet"}
-        </p>
-        <p className="mt-2 text-xs text-ink-secondary max-w-lg">
-          {reason === "no-rows"
-            ? "This pair has no hours stored. It has not traded in the window we collect, which is a state of the pool rather than a failure here."
-            : "Every stored hour still falls inside the first window, so no average can be computed yet. The line appears as soon as one window fills."}
-        </p>
+        <p className="text-ink font-semibold">{title}</p>
+        <p className="mt-2 text-xs text-ink-secondary max-w-lg">{body}</p>
       </div>
     </ChartMessage>
   );

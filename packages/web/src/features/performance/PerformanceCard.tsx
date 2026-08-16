@@ -77,6 +77,7 @@ export function PerformanceCard() {
               isPending={isPending}
               isError={isError}
               aprWindow={aprWindow}
+              bounded={from !== undefined}
             />
           </div>
         </div>
