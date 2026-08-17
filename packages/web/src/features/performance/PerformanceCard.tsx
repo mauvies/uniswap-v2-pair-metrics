@@ -15,7 +15,7 @@ const DEFAULT_PAIR = PAIRS[0];
 
 const WINDOW_OPTIONS: readonly PillOption<AprWindow>[] = APR_WINDOWS.map((hours) => ({
   value: hours,
-  label: `${hours}h`,
+  label: `${hours}h avg`,
 }));
 
 export function PerformanceCard() {
