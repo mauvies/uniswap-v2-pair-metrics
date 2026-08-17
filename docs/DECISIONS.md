@@ -7,6 +7,28 @@ The exercise leaves several definitions open and invites documented assumptions.
 below is marked **verified** (checked against the live gateway, 11–12 August 2026) or
 **decided** (a choice, with its alternative in §9).
 
+## Decisions at a glance
+
+The reasoning behind each row, and the alternative it was chosen over, is in the section it
+links to.
+
+| Decision | Why | § |
+|---|---|---|
+| The inactive pair ships in the config | an empty series is specified behaviour, not a degenerate path | [§1](#1-data-source) |
+| Fees are 0.30% of volume | `feeTo` has never been activated on mainnet, and there is no RPC here to check | [§2.1](#21-fees-are-030-of-volume--decided) |
+| Point-in-time liquidity in the denominator | matches convention, and is numerically indistinguishable on this data | [§2.2](#22-apr--decided) |
+| Gaps reconstructed on read, never stored | a missing hour reports that nothing happened, not that data is missing | [§2.3](#23-gaps-are-reconstructed-not-imputed--verified-premise-decided-handling) |
+| Warm-up points are `null` | a partial window changes what the number means | [§2.4](#24-warm-up-points-are-null--decided) |
+| No float on the persistence path | `Number()` is called in exactly one place, inside the APR function | [§3](#3-architecture) |
+| Only completed hours are ingested | the hour in progress is still collecting volume | [§5.1](#51-only-completed-hours-are-ingested--decided) |
+| A 900-second finality margin | immutable rows leave a reorged hour no correction path | [§5.2](#52-now-is-bounded-by-the-indexer--decided) |
+| Staleness read from `MAX(hour_start_unix)` | the data is its own cursor, with no run-state to drift ahead of it | [§5.3](#53-staleness-reference-is-maxhour_start_unix--decided) |
+| A hand-written failure classifier, no retry library | the classification, not the loop, is what is specific to this gateway | [§5.4](#54-subgraph-client--decided) |
+| `from` and `to` optional and inclusive | a missing bound is the stored extent, not an error | [§6.1](#61-contract) |
+| All three windows in every response | switching the moving average then needs no refetch | [§6.2](#62-all-three-windows-are-returned-per-point--decided) |
+| Pairs as constants, no `pairs` table | two fixed addresses, whose only consumers are two labels | [§9](#9-considered-and-rejected) |
+| Postgres, not a document store | `Decimal128` is opt-in in BSON where `NUMERIC` is the default | [§9](#9-considered-and-rejected) |
+
 ---
 
 ## 1. Data source
@@ -83,19 +105,20 @@ Fees actually earned in the trailing N-hour window, scaled to a year, over the c
 the pool when that window closes: `reserveUSD(t)` is read at t itself, the final hour of
 the window. `N ∈ {1, 12, 24}` is the exercise's moving-average window.
 
-We use point-in-time `reserveUSD` to match standard pool dashboards. While this works well
-for stable pairs like USDC/WETH (where both methods differ by <0.1 percentage points of
-APR), it fails when liquidity collapses. In pools like WETH/RKFL — which dropped from
-$189.7k to near zero — dividing earlier fees by a tiny remaining balance artificially
-inflates the APR. (§9 details the window-averaged alternative.)
+We use point-in-time reserveUSD to calculate APR because it matches industry standards and
+is easy to verify on-chain. Combining a flow over time (volume) with a single snapshot
+(reserves) is inherent to annualized rates. The two approaches only differ when liquidity
+changes within the window — by at most 0.097 percentage points on USDC/WETH, which moves
+under 1% a day. The moving-average selector smooths those variations across the chart (§9
+covers the window-averaged alternative).
 
 Worked example, the 24 hours to 12 August 2026 09:00 UTC: $237,045 of volume × 0.003 =
-$711 in fees, ×365 = $259,566 a year. Over `reserveUSD(t)` = $17,689,023 that is
+$711.135 in fees, × 365 = $259,564.275 a year. Over `reserveUSD(t)` = $17,689,023 that is
 **1.467%**; over the window mean of $17,585,645 it would be 1.476% — a 0.009-point
-difference, inside the 0.1-point bound above. Reserves rose slightly across this window,
-so point-in-time reads marginally lower here; in a collapse it goes the other way, and far
-harder. 1.467% was the newest complete point at measurement and the 48-hour high: the top
-of the plotted range, not its middle.
+difference, well inside the 0.1-point bound above. Reserves rose slightly across this
+window, so point-in-time reads marginally lower here; in a collapse it goes the other way,
+and far harder. 1.467% was the newest completed point at measurement and the 48-hour high —
+the top of the plotted range, not the average.
 
 ### 2.3 Gaps are reconstructed, not imputed — verified premise, decided handling
 
@@ -120,10 +143,6 @@ API would fill that week with zeros and serve it as observed data. So ingest alw
 from `MAX(hour_start_unix) + 1h` and works forward, however long it was away. Catch-up is
 never capped: a cap would leave exactly the kind of hole we cannot tell apart from a quiet
 period.
-
-A testing consequence: USDC/WETH shows no gap in 1,000 verified hours (§1) and the dead pair
-has no recent rows at all, so no live series exercises reconstruction. The gap tests build
-their series synthetically.
 
 ### 2.4 Warm-up points are `null` — decided
 
@@ -155,54 +174,37 @@ packages/
 **pnpm workspaces, no build orchestrator** — four packages; caching would not pay for
 itself.
 
-**Nothing compiles across package boundaries.** `shared` is consumed as TypeScript source:
-its `exports` names `src/index.ts` and it emits nothing. Vite bundles it for the web app; the
-container images copy the source and Node type-strips it — so `tsc` is a typechecker
-everywhere in this repo and never a build step. That is what keeps build ordering out of a
-workspace with no orchestrator: no package has to be built before another can compile.
+**Nothing compiles across package boundaries.** `shared` is consumed directly as TypeScript
+source: its `exports` field points to `src/index.ts` and emits no build artifacts. Vite
+bundles it for the web app, while container images copy the source and rely on Node's native
+type stripping — making `tsc` a pure typechecker across the repository rather than a build
+step. This design eliminates build ordering in a workspace without a task orchestrator: no
+package needs to be built before another can compile.
 
 Verified on 2026-08-13 by bundling a package that imports `shared` by name: 1.4 kB of
-self-contained ESM, no external dependencies, runs on plain Node. The drizzle schema is
-reached through a `./schema` subpath rather than the barrel, because a top-level
-`pgTable(...)` call cannot be proven side-effect-free: re-exporting it pinned 74 kB of
-column builders into every consumer, including the browser bundle `web` will produce.
+self-contained ESM with zero external dependencies, running directly on plain Node. The
+Drizzle schema is imported via a `./schema` subpath instead of the main barrel file, because
+a top-level `pgTable(...)` call cannot be proven side-effect-free: re-exporting it pulled
+74 kB of column builders into every consumer, including the browser bundle for `web`.
 
-The pool and the drizzle instance sit behind a second subpath, `./db`, once ingest and the
-API turned out to open the same connection two ways. Re-measured on 2026-08-14: the barrel
-bundles to 1,549 bytes with no drizzle or pg symbols in it, and `pg` does not bundle for a
-browser at all — esbuild fails to resolve `net`, `events` and `util`. So this boundary holds
-harder than the schema's: leaking the schema was silent weight, leaking the connection
-breaks the web build. `max` stays with the caller, since one pair at a time and concurrent
-requests want different pools.
+Two additional subpaths follow this same pattern:
 
-Both subpaths, and `databaseUrl`, live under `src/db/` — one place for everything that
-answers "how do we talk to Postgres", separate from the domain code the barrel exports.
-`./schema` and `./db` still name two files there, never a folder index: an index re-exporting
-both would drag the schema back through `./db`.
+- `./db` for the connection pool and Drizzle instance, introduced when `ingest` and `api`
+  required the same database setup.
+- `./test-helpers` for shared database test utilities.
 
-A third subpath, `./test-helpers`, holds what ingest's and the API's database tests turned
-out to need identically — `testPool`, `assertReachable`, and the two configured pair
-addresses under the names the tests read by. Each package keeps its own gateway stubs or
-row fixtures locally; only the parts that were already the same file twice moved. The
-filename ends `.test-helpers.ts` for the same reason it does in ingest and the API: vitest
-never collects it as a suite, and `.dockerignore`'s `**/*.test-helpers.ts` keeps it, and
-what it pulls in, out of both container images.
+The `./db` subpath boundary is enforced even more strictly than the schema's: `pg` cannot be
+bundled for the browser, so leaking this dependency breaks the web build entirely rather
+than just increasing bundle size.
 
-**§6.1's response shape lives in `shared`, not in `api`.** `web` reads the same three types
-the route returns — `PairMetrics`, `MetricPoint`, `ResolvedRange` — and a contract
-redeclared on the client drifts from the server with nothing to catch it. That is the
-connection pool's trigger, a second consumer, applied one commit before the consumer lands:
-the shape is fixed by §6.1 and pinned by the route's tests, so there is nothing left to
-guess. Types erase, so this costs the bundle nothing: the barrel emits byte-identical
-output before and after the move, checked on 2026-08-14, and the measurement above stands.
-What stays in `api` is the logic that builds the shape — flooring, the lookback, the
-resolve — and `StoredExtent`, which describes stored rows rather than the wire.
+§6.1's response types — `PairMetrics`, `MetricPoint`, `ResolvedRange` — live in the barrel
+for the same reason: `web` reads the same contract the route returns, and a shape redeclared
+on the client drifts from the server with nothing to catch it.
 
-**Node 24 or newer, and the version is load-bearing.** Native type stripping runs `.ts`
-files with no transpiler, so no application code is transpiled and there is no `tsx`
-dependency of ours — `drizzle-kit` bundles one to read its own config, which runs only at
-migration time. An older runtime fails at the first import rather than at install, so
-`engine-strict` turns that into an error `pnpm install` can explain.
+**Node 24 or newer, and the version is load-bearing.** Native type stripping is what lets
+application code run without a transpiler — it is the runtime half of the decision above.
+`engine-strict` turns an older runtime into an error `pnpm install` can explain, rather than
+a parse error at first import.
 
 **APR is computed in JS, in `shared`, not in SQL.** Window functions get awkward once the
 series has gaps, and a pure function can be tested against hand-computed fixtures.
@@ -274,9 +276,9 @@ CREATE TABLE pair_hour_metrics (
   it, which a row count cannot.
 - No `is_partial`, no `updated_at` — rows are immutable (§5.1).
 
-Pair symbols live in `shared` as constants, not a table (§9). Migrations use `drizzle-kit
-generate` + `migrate`, never `push`; the `.sql` files are committed as the readable form of
-the data model.
+Pair symbols live in `shared` as constants, not a table (§9). Migrations use
+`drizzle-kit generate` + `migrate`, never `push`; the `.sql` files are committed as the
+readable form of the data model.
 
 ---
 
@@ -361,8 +363,10 @@ checked to parse as a finite, non-negative decimal — `'NaN'` and `'Infinity'` 
 `NUMERIC` would accept downstream, and rows are immutable (§5.1), so anything admitted here
 is permanent. This is the only place that validation lives; §4 says why not in DDL too.
 
-**No retry library.** The loop is a dozen lines; the interesting part is the classification,
-which is specific to this gateway (§8).
+**No retry library.** A library supplies the loop, not the classification: which failures a
+second attempt could answer differently is specific to this gateway (§8). Passing that in as
+a `shouldRetry` callback still means writing the same taxonomy, buried in someone else's
+configuration.
 
 ### 5.5 Lifecycle
 
@@ -378,8 +382,8 @@ Per pair, independently:
    query whatever the gap: no branch for backfill versus incremental versus catch-up.
    Explicit `first`, `orderBy: hourStartUnix` ascending (§9). `effectiveCurrentHour` is
    computed once per run; an hour completing mid-run is picked up by the next.
-3. Validate with zod, then write in one transaction for that pair with `INSERT … ON CONFLICT
-   DO NOTHING`. A response that fails validation is never persisted.
+3. Validate with zod, then write in one transaction for that pair with
+   `INSERT … ON CONFLICT DO NOTHING`. A response that fails validation is never persisted.
 4. A failure on one pair leaves every other pair's committed data intact; the run exits
    non-zero and the failed pair heals on the next run.
 
@@ -402,11 +406,11 @@ is older than the threshold* — produces every case, with no special branches:
 | Inactive pair | empty, every run | Query 48h, find nothing, exit 0 |
 
 The 60-minute guard lives inside the process, so frequent invocation is safe — the process
-decides whether there is anything to do. Two invocation modes, one entry point: `pnpm
-ingest` against a database on localhost, and `docker compose run --rm ingest` against the
-compose network — either of them driven by a cron line. Nothing sleeps or loops internally. The cron line is `15 * * * *`, not `0 * * * *`: on the hour the
-newest hour has not cleared the margin yet, so every run would find nothing and each write
-would land an hour late.
+decides whether there is anything to do. Two invocation modes, one entry point:
+`pnpm ingest` against a database on localhost, and `docker compose run --rm ingest` against
+the compose network — either driven by a cron line. Nothing sleeps or loops internally.
+The cron line is `15 * * * *`, not `0 * * * *`: on the hour the newest hour has not cleared
+the margin yet, so every run would find nothing and each write would land an hour late.
 
 ---
 
@@ -451,11 +455,12 @@ GET /health
   are `null` — §2.4's warm-up, surfacing mid-range instead of at the start of history. Both
   behaviours carry dedicated tests.
 - **The lookback starts at the newest stored hour at or before `from − 23h`, not at
-  `from − 23h`.** A pair can stay quiet for longer than the window, and `hour_start_unix >=
-  from − 23h` then returns nothing before the requested range: the series starts inside it,
-  and its first points come back as warm-up `null` when their windows are in fact full of
-  quiet hours (§2.3). That anchor row is what makes those hours reconstructable, and the
-  bug it prevents is invisible — the response is well-formed and the numbers are wrong.
+  `from − 23h`.** A pair can stay quiet for longer than the window, and
+  `hour_start_unix >= from − 23h` then returns nothing before the requested range: the
+  series starts inside it, and its first points come back as warm-up `null` when their
+  windows are in fact full of quiet hours (§2.3). That anchor row is what makes those hours
+  reconstructable, and the bug it prevents is invisible — the response is well-formed and
+  the numbers are wrong.
   Pinned by `a gap spanning the lookback still fills the window`.
 - **`from` and `to` are optional and both are inclusive**, floored to the hour they fall in:
   `to=…T23:59:59Z` keeps the hour that started at 23:00. An absent bound falls back to the
@@ -514,14 +519,16 @@ always 23 hours.
 
 Vite + React + TypeScript SPA. Function components and hooks throughout; the brief prefers
 hooks over classes "where possible", and nothing here needs a class. TanStack Query for
-fetching, keyed on `(pair, from, to)`. Tailwind v4 with a CSS-first `@theme` built from
-values extracted from the Figma; those values and the icon set ship with the package.
+fetching, keyed on `(pair, from)`: the range selector only moves the lower bound, and an
+absent `to` resolves to the newest stored hour (§6.1), which is what a live chart wants.
+Tailwind v4 with a CSS-first `@theme` built from values extracted from the Figma; those
+values and the icon set ship with the package.
 
 **The browser reaches the API through the Vite dev server's proxy**, which forwards `/api` to
 the service on loopback, so the client carries no base URL and the API needs no CORS
 configuration. Rejected: `@fastify/cors`, a config surface on a service that has none, and
 serving the built SPA from Fastify, which would couple the API to a web build against §3. A
-deployed SPA would need a reverse proxy or CORS in front of it — §10's.
+deployed SPA would need a reverse proxy or CORS in front of it.
 
 **Three inconsistencies in the source are reproduced rather than normalised**, because the
 brief asks for pixel fidelity and silently tidying a design is not our call: three
@@ -578,20 +585,25 @@ do not fit, and shrinking the field leaves two cramped things instead of one who
 header and the sidebar stay fixed to the viewport, the sidebar at `100dvh` so its bottom
 group holds its place instead of drifting down as the page grows.
 
-**States the design does not define** — loading, error, empty — occupy the plot area at its
-fixed height, so switching pairs causes no layout shift. The card keeps its full chrome in
-all three: header, legend and every selector stay interactive, so returning from the empty
-pair needs no reload. The empty state is designed rather than generic — it names what is
-absent and why, since a pair with no rows is a real state of this system, not a failure.
+**States the design does not define** — loading, error and empty — occupy the plot area at
+its fixed height, so switching pairs causes no layout shift. The card keeps its full chrome
+in all three: header, legend and every selector stay interactive, so returning from the
+empty pair needs no reload.
 
-**There are three empty states, not one.** A pair with no stored rows gets copy that names
-both possible causes — never traded in our window, or never ingested — and claims neither,
-because the table cannot tell them apart (the same reason `/health` reports null, §6.1). A
-bounded range that finds nothing gets its own copy: the response is identical to the
-no-rows one, so the client tells them apart by whether its own request carried bounds — an
-unbounded request comes back empty only for a pair with no rows. And a pair whose stored
-hours all fall inside the first N−1 of the window cannot be averaged yet (§2.4). Pinned by
-`empty state renders`, `names an empty range apart from a pair with no rows` and
+**Empty is three states, not one**, because a pair with no rows is a real state of this
+system rather than a failure, and the three have different causes:
+
+- **Unbounded, no stored rows:** copy names both possible reasons — never traded in our
+  window, or never ingested — and claims neither, since the table cannot tell them apart
+  (the same reason `/health` reports null, §6.1).
+- **Bounded range empty:** a request carrying time bounds that finds nothing gets its own
+  copy. The API response is identical to the no-rows case, so the client tells them apart by
+  whether its own request carried bounds — an unbounded request comes back empty only for a
+  pair with no stored rows.
+- **Warm-up:** a pair whose stored hours all fall inside the first N−1 of the window cannot
+  be averaged yet (§2.4).
+
+Pinned by `empty state renders`, `names an empty range apart from a pair with no rows`, and
 `names warm-up apart from a pair with no rows`.
 
 ---
@@ -684,8 +696,8 @@ the last digit, `big.js` is the narrow answer.
 
 **Paginating the fetch, with batched writes.** Only catch-up grows, and at most one row per
 hour, so the ceiling is the page limit of **1,000 rows** (`first: 1000` returned exactly
-that in testing) — ~41 days of downtime for a pair trading every hour, more calendar time
-for a quieter one. Rejected as complexity for a scenario this system will not meet.
+that in testing) — ~41 days of downtime for a pair trading every hour, and even more calendar
+time for a quieter pair. Rejected as complexity for a scenario this system will not meet.
 Instead: an explicit `first` and ascending order, so an exceeded limit returns a contiguous
 prefix and the next run resumes from the advanced `MAX(hour_start_unix)`. If the window
 grew to weeks, the technique is cursor pagination on `hourStartUnix_gt` with a batched
@@ -736,10 +748,9 @@ Query. Nothing is shared across the tree, so a store would be indirection with n
 **API-side caching (Redis, in-memory).** The query is a range scan on the primary key, so it
 costs what the requested range costs and nothing more — there is no latency to remove, and a
 cache would add invalidation plus a second way to serve stale data. The right layer for
-immutable hourly rows is HTTP: `Cache-Control` with a `max-age` running to the next hour
-boundary *plus the ingest margin* lets browsers and any CDN cache it with no invalidation
-logic. Cheap to add if time allows; the margin matters, since expiring exactly on the
-boundary refreshes just before the new hour is written.
+immutable hourly rows is HTTP: `Cache-Control` max-age aligned to the next hour boundary
+plus the ingest margin. In production, an edge CDN handles this seamlessly from headers
+alone without application-level caching logic.
 
 **SSR/ISR with Next.js.** Better than it first looks: the parameter space is small enough to
 enumerate, and the data changes on a known cadence, once an hour (§5.1). Rejected because
@@ -777,6 +788,18 @@ guarantee this system cannot lose.
   needs the extent held separately — a second query, or the first unbounded load cached.
   Until then §7's row is fixed at three options, which stay honest as history grows but stop
   short of what the data could support.
+- **A live point for the hour in progress.** The finality margin protects the stored table
+  (§5.2), not the display, and would not move for this: any margin above zero leaves a gap
+  between the newest stored hour and now, so shortening it only narrows that gap where
+  serving the gap separately removes it. The shape is a provisional point — the hour in
+  progress, plus the finished hour still inside the margin — computed per request against the
+  subgraph and never written. The chart would draw it dashed, at reduced opacity and labelled
+  live, since it can still change. Caching it is a different problem from §9's `Cache-Control`
+  entry: that one caches immutable rows for up to an hour, this one a value that moves
+  continuously, so it needs a short server-side cache measured in seconds, near the indexer's
+  own lag, and sized against concurrent viewers rather than the ingest's hourly cadence. The
+  edge layer §9 would hand the hourly endpoint does not help here: a window of seconds keeps
+  the cache in the process, where the viewer count it is sized against is known.
 - **Design the states the Figma leaves undefined.** Loading, error and empty are invented
   within the design's idiom, and every breakpoint is ours because the Figma fixes a single
   1440px frame (§7). With more time these would be designed, not extrapolated.
@@ -788,5 +811,6 @@ guarantee this system cannot lose.
 - **Data retention.** The table grows without bound; a real deployment would want a
   retention policy or rollups.
 - **Metrics instead of logs** for indexer lag and gateway quota, so freshness is observable
-  rather than discoverable.
+  rather than discoverable. Their point is alerting — lag past its warning threshold (§8), a
+  non-zero ingest exit (§5.5) — which today is a log line with nothing watching it.
 - **An end-to-end smoke test** across ingest → API → chart.
