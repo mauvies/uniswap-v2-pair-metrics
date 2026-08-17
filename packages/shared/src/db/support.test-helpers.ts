@@ -21,8 +21,8 @@ export const DEAD = addressOf("WETH/RKFL");
 export const HOUR = 1_786_525_200;
 
 /**
- * Not read from `POSTGRES_DB`: a filtered `pnpm --filter … test` inherits nothing from
- * `scripts/test.sh`, which takes the name from here to create and migrate it.
+ * Not read from `POSTGRES_DB`: a filtered `pnpm --filter … test` inherits nothing
+ * from `scripts/test.sh`, which reads the name from here to create and migrate it.
  */
 export const TEST_DATABASE = "uniswap_v2_pair_metrics_test";
 

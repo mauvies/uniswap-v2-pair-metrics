@@ -2,14 +2,13 @@ import { HOUR_SECONDS } from "./constants.ts";
 import type { PairHourRow, ReconstructedHour } from "./types.ts";
 
 /**
- * Fill the quiet hours between stored rows (§2.3).
+ * Fills quiet hours between stored rows (§2.3).
  *
+ * Throws if rows are not strictly ascending. A query missing an `ORDER BY`
+ * or selecting multiple pairs at once would otherwise bypass the fill loop,
+ * returning a series whose moving windows span incorrect time intervals.
  *
- * Throws on rows that are not strictly ascending. A query missing its `ORDER BY`, or one
- * selecting both pairs at once, would otherwise skip the fill loop and hand back a series
- * whose windows silently span the wrong number of hours.
- *
- * @param rows stored hours for one pair, ascending by `hourStartUnix`
+ * @param rows Stored hours for a single pair, ordered ascending by `hourStartUnix`.
  */
 export function reconstructSeries(rows: readonly PairHourRow[]): ReconstructedHour[] {
   const first = rows[0];
@@ -56,10 +55,7 @@ function observed(row: PairHourRow): ReconstructedHour {
   };
 }
 
-/**
- * Zero volume means zero fees under any rate, so the fee rate never enters this path. That
- * is what keeps §4's generated column the single site for it.
- */
+/** Zero volume means zero fees at any rate, so §4's generated column stays its only site. */
 function quiet(hourStartUnix: number, carriedFrom: PairHourRow): ReconstructedHour {
   return {
     hourStartUnix,

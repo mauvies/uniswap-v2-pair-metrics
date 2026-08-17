@@ -11,8 +11,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { FEE_RATE, HOUR_SECONDS } from "../constants.ts";
 
-// Rendered into DDL, so each constant has one home (§4). sql.raw because a bound
-// parameter cannot appear in DDL — interpolating directly produces `$1`.
+// Rendered into DDL, so each constant has one home (§4).
+// `sql.raw` because a bound parameter cannot appear in DDL: interpolating produces `$1`.
 const feeRate = sql.raw(String(FEE_RATE));
 const hourSeconds = sql.raw(String(HOUR_SECONDS));
 
@@ -29,8 +29,8 @@ export const pairHourMetrics = pgTable(
     volumeUsd: numeric("volume_usd").notNull(),
     // Drizzle does not infer NOT NULL for a generated column, so it is declared.
     feesUsd: numeric("fees_usd").generatedAlwaysAs(sql`volume_usd * ${feeRate}`).notNull(),
-    // mode "number": realistic counts sit ~12 orders of magnitude under 2^53, and a
-    // BigInt would not survive JSON.stringify.
+    // mode "number": real counts sit ~12 orders of magnitude below 2^53,
+    // and a BigInt would not survive JSON.stringify.
     hourlyTxns: bigint("hourly_txns", { mode: "number" }).notNull(),
     ingestedAt: timestamp("ingested_at", { withTimezone: true }).notNull().defaultNow(),
   },

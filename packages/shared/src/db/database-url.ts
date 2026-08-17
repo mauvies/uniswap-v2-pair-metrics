@@ -6,15 +6,15 @@ const DEFAULTS = {
 } as const;
 
 /**
- * The connection string for a host-side process — migrations, ingest, the API.
+ * Connection string for host-side processes (migrations, ingest, API).
  *
- * `DATABASE_URL` wins; otherwise it is assembled from the same `POSTGRES_*` variables
- * `docker-compose.yaml` reads, with the same defaults, so exporting `POSTGRES_PORT` to
- * dodge a Postgres already on 5432 reaches every one of them.
+ * `DATABASE_URL` takes precedence. If unset, it is assembled from the same `POSTGRES_*`
+ * variables and defaults as `docker-compose.yaml`. This allows exporting `POSTGRES_PORT`
+ * to avoid collisions with a local Postgres instance on 5432.
  *
- * Compose keeps its own copy of these defaults and cannot import this: it configures the
- * server itself, and the URL it hands the ingest container uses the compose network host
- * `db` rather than localhost. That one is a genuinely different string, not a third copy.
+ * Docker Compose maintains its own copy of these defaults to configure the DB container.
+ * The URL supplied to the containerized ingest points to the Compose host `db` rather
+ * than `localhost`.
  */
 export function databaseUrl(env: Record<string, string | undefined>): string {
   if (env.DATABASE_URL !== undefined && env.DATABASE_URL !== "") {

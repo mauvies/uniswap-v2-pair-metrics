@@ -1,14 +1,14 @@
 import type { Pair } from "./types.ts";
 
 /**
- * Constants rather than a table (§9). Token order and symbols verified against the
- * subgraph on 2026-08-12, never re-checked at runtime (§8).
+ * Hardcoded pair configuration rather than a table (§9).
+ * Token order and symbols verified against the subgraph on 2026-08-12,
+ * never re-checked at runtime (§8).
  *
- * WETH/RKFL is dead since 2022-11-29 and belongs here on purpose (§1) — not an oversight.
+ * Note: WETH/RKFL has been inactive since 2022-11-29; included intentionally per §1.
  *
- * Typed non-empty so `PAIRS[0]` is a `Pair` rather than a maybe. The list is fixed here, so
- * a caller wanting a default pair should not have to write a runtime check for a case the
- * file makes impossible.
+ * Typed as a non-empty tuple so `PAIRS[0]` is guaranteed to be a `Pair` without
+ * needing `undefined` checks downstream.
  */
 export const PAIRS: readonly [Pair, ...Pair[]] = [
   {

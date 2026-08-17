@@ -37,11 +37,9 @@ export interface Pair {
   token1Symbol: string;
 }
 
-/**
- * The three below are §6.1's response, and they live here rather than in `api` because the
- * web app reads the same shape. A contract two packages depend on belongs in the package
- * they share — the reasoning §3 already applies to the connection pool.
- */
+// The three below are §6.1's response. They live here, not in `api`, because the web
+// app reads the same shape: a contract two packages depend on belongs in the package
+// they share.
 
 /** The interval actually served, which `range` echoes rather than the one requested. */
 export interface ResolvedRange {

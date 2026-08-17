@@ -4,10 +4,12 @@ import type { AprByWindow, AprWindow, ReconstructedHour } from "./types.ts";
 const OUTPUT_DECIMALS = 3;
 
 /**
- * APR at every point of a reconstructed series, for all three windows (§2.2, §6.2).
+ * Computes the APR for all three moving-average windows at every point in a
+ * reconstructed series (§2.2, §6.2).
  *
- * The series must be contiguous — `reconstructSeries` guarantees it. A gap makes a window
- * of N entries span more than N hours, which yields wrong numbers rather than an error.
+ * Requires a contiguous series (guaranteed by `reconstructSeries`). Gaps cause
+ * an N-entry window to span more than N hours, producing incorrect values
+ * rather than throwing an error.
  */
 export function computeAprSeries(series: readonly ReconstructedHour[]): AprByWindow[] {
   return series.map((point, index) => {
@@ -37,8 +39,8 @@ function aprAt(
     .slice(index - window + 1, index + 1)
     .reduce((total, hour) => total + Number(hour.feesUsd), 0);
 
-  // `NUMERIC` accepts 'NaN' and the generated column propagates it, so a corrupt value is
-  // reachable from stored data. Unguarded it reaches JSON as null and passes for warm-up.
+  // PostgreSQL NUMERIC accepts 'NaN', which propagates to JSON as null and
+  // could be misinterpreted as a valid warm-up state.
   if (!Number.isFinite(liquidity) || !Number.isFinite(fees)) {
     throw new Error(`non-finite reserveUsd or feesUsd in the ${window}h window at index ${index}`);
   }
