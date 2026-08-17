@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * Transcribed from docs/design-tokens.md §1, which lists every call site each value was read
+ * Transcribed from docs/STYLING.md §1, which lists every call site each value was read
  * from. The names are ours: the Figma file defines no variables and no shared styles.
  *
  * Duplicate literals stay duplicated — `border-selected` and `primary-strong` are both

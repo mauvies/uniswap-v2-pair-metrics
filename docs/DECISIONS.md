@@ -528,7 +528,7 @@ brief asks for pixel fidelity and silently tidying a design is not our call: thr
 near-identical blues where a system would use one, gridline gradients whose transform makes
 every pixel the stop-0 colour, and `Total Depolyed` misspelled on the fifth metric card.
 Correcting any of them is a deviation a reviewer holding the Figma cannot account for, and
-would read as ours. `docs/design-tokens.md` §1.1 and §2.3 record how each was measured.
+would read as ours. `docs/STYLING.md` §1.1 and §2.3 record how each was measured.
 
 **The sidebar's destinations, the account button and the search field are chrome** — named
 for assistive technology, but going nowhere, because the exercise is one page. Reproducing

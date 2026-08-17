@@ -26,7 +26,7 @@ function flat(count: number, feesUsd: string, reserveUsd?: string): Reconstructe
 }
 
 describe("computeAprSeries", () => {
-  it("matches the worked example in DESIGN.md §2.2", () => {
+  it("matches the worked example in DECISIONS.md §2.2", () => {
     // 24 hours to 2026-08-12 09:00 UTC: $237,045 of volume against $17,689,023 of
     // reserves. Fees are $711.135, annualised $259,564 — 1.467% of the pool.
     const hourlyFees = (237_045 * FEE_RATE) / 24;

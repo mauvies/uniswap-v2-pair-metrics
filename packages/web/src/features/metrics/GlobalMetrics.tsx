@@ -3,7 +3,7 @@ import { SectionHeading } from "../../components/ui/SectionHeading.tsx";
 
 /**
  * Hardcoded, as the brief allows (§7). None of it derives from the pair metrics — these are
- * the design's own figures, transcribed from docs/design-tokens.md §2.3.
+ * the design's own figures, transcribed from docs/STYLING.md §2.3.
  */
 const METRICS: { label: string; value: string; delta?: string }[] = [
   { label: "Total Allocation", value: "$2,533,557.32" },

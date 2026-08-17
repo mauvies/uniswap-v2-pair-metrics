@@ -5,7 +5,7 @@ served over HTTP and plotted as APR in a React dashboard.
 
 Data comes from the Uniswap v2 **subgraph** rather than from chain scanning. Ingest holds
 each hour back behind a 15-minute finality margin, so the newest stored point is always at
-least that far behind the clock (`docs/DESIGN.md` §5.2).
+least that far behind the clock (`docs/DECISIONS.md` §5.2).
 
 ## Layout
 
@@ -82,7 +82,7 @@ pairs fail and it exits `1`. The image holds a copy of the source, so rebuild it
 
 Schedule either with `15 * * * *`, not on the hour: hours are stored once they clear a
 15-minute finality margin, so an on-the-hour run would always find the newest hour too
-recent (`docs/DESIGN.md` §5.2).
+recent (`docs/DECISIONS.md` §5.2).
 
 Exit codes: `0` collected or nothing to do, `1` at least one pair failed and the others are
 committed, `2` aborted before any was attempted. One JSON line per event to stdout, errors
@@ -93,7 +93,7 @@ to stderr.
 `GET /pairs/:address/metrics?from=<ISO-8601>&to=<ISO-8601>` returns every stored metric for
 one pair over a range, plus APR over 1, 12 and 24 hours at each point. Both bounds are
 optional and inclusive, floored to their hour; omit them to get everything stored. Hours the
-subgraph never wrote come back reconstructed and flagged `imputed: true` (`docs/DESIGN.md`
+subgraph never wrote come back reconstructed and flagged `imputed: true` (`docs/DECISIONS.md`
 §2.3), and `range` echoes the interval actually served rather than the one asked for.
 
 ```sh
@@ -102,7 +102,7 @@ curl -s "http://127.0.0.1:3000/pairs/0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc/
 
 `GET /health` reports whether the database is reachable and how old each pair's newest
 stored hour is, counted from the end of that hour — the same reference the ingest guard
-measures staleness from (`docs/DESIGN.md` §5.1). A pair with no rows reports `null` for
+measures staleness from (`docs/DECISIONS.md` §5.1). A pair with no rows reports `null` for
 both: that is the dead pair's steady state, not a fault. With the database down the endpoint
 answers `503`, and it recovers on its own once the database is back — no restart.
 
@@ -164,15 +164,15 @@ pnpm --filter @uniswap-v2-pair-metrics/shared test    # the Docker-free subset
 ```
 
 `shared`'s tests are pure. Ingest's and the API's write to a real Postgres, because the
-transaction and conflict behaviour `docs/DESIGN.md` §8 promises cannot be pinned against a
+transaction and conflict behaviour `docs/DECISIONS.md` §8 promises cannot be pinned against a
 fake. They empty the table between tests, so they run against a database of their own that
 `pnpm test` creates and migrates — development data is never touched.
 
 ## Docs
 
-- [`docs/DESIGN.md`](docs/DESIGN.md) — hypotheses, the APR formula and its derivation, the
+- [`docs/DECISIONS.md`](docs/DECISIONS.md) — hypotheses, the APR formula and its derivation, the
   data model, the API contract, failure handling, and what was considered and rejected.
-- [`docs/design-tokens.md`](docs/design-tokens.md) — the Figma extraction: the colour, type,
+- [`docs/STYLING.md`](docs/STYLING.md) — the Figma extraction: the colour, type,
   radius and elevation primitives behind the `@theme`, per-section geometry, and what the
   design leaves undefined.
 

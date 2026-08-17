@@ -66,7 +66,7 @@ like the three blues, is template drift rather than a system. Reproduced faithfu
 
 > **Three blues.** `#2E71F0`, `#2467E8`, `#4A90E2` are visually near-identical and appear
 > to be template drift rather than a system. **Decision: reproduce all three faithfully**
-> (the brief asks for pixel-perfect), recorded in DESIGN.md §7 as an observed
+> (the brief asks for pixel-perfect), recorded in DECISIONS.md §7 as an observed
 > inconsistency we chose not to normalise.
 >
 > **`positive` is not Tailwind `green-500`.** `#5AD700` is a bright chartreuse; Tailwind's
@@ -86,7 +86,7 @@ like the three blues, is template drift rather than a system. Reproduced faithfu
 > Its `gradientTransform` is `translate(604.8, -0.7) rotate(90) scale(299.18, 180854)`,
 > so across the full 1209px span the gradient offset never exceeds ~0.005 of 1 — every
 > pixel renders the stop-0 colour. Using solid stop-0 values is a faithful reproduction,
-> not a simplification. Recorded in DESIGN.md §7 all the same.
+> not a simplification. Recorded in DECISIONS.md §7 all the same.
 
 ### 1.2 Type
 
@@ -201,7 +201,7 @@ Content (hardcoded per the brief):
 
 > `Total Depolyed` is misspelled **in the design**. Reproducing it is pixel-faithful but
 > reads as our typo; correcting it silently deviates from the source. **Decision:
-> reproduce the string exactly and record the typo in DESIGN.md §7**, so the fidelity is
+> reproduce the string exactly and record the typo in DECISIONS.md §7**, so the fidelity is
 > deliberate and visible rather than ambiguous.
 
 ### 2.4 Performance card (`2:70`)

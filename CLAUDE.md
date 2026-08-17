@@ -2,7 +2,7 @@
 
 ## Read first
 
-`docs/DESIGN.md` is the source of truth for every decision — hypotheses, data model, API
+`docs/DECISIONS.md` is the source of truth for every decision — hypotheses, data model, API
 contract, failure handling, and what was considered and rejected. Read it before proposing
 anything that contradicts it. If you think a decision is wrong, say so explicitly instead of
 working around it.
@@ -35,14 +35,14 @@ correctly in isolation, with the path around it never walked.
 
 ## Objecting to a decision
 
-You have standing authority — an obligation, really — to challenge anything in DESIGN.md or
+You have standing authority — an obligation, really — to challenge anything in DECISIONS.md or
 in my instructions. A useful objection names four things: the decision, what is wrong with
 it (verified where possible), what to do instead, and what the change costs. If you cannot
 fill all four, it is a note, not an objection.
 
 ## Non-negotiables
 
-- Every "handled" row in DESIGN.md §8 needs a test with the name given there, and so does
+- Every "handled" row in DECISIONS.md §8 needs a test with the name given there, and so does
   each pin under "eliminated by construction".
 - No floats on the persistence path: subgraph strings → `NUMERIC` → strings out.
   `Number()` is called in exactly one place, inside the APR function (§3).
@@ -60,9 +60,9 @@ Biome enforces what it can (`pnpm check`). These are the conventions it doesn't 
 - **Comments carry what the code can't.** Before writing one, ask what a reader loses
   without it. Preconditions that can't be checked at runtime, decisions with a rejected
   alternative, and non-obvious reasons earn their place. These do not: restating the
-  signature, repeating a DESIGN.md section instead of citing it, explaining a well-named
+  signature, repeating a DECISIONS.md section instead of citing it, explaining a well-named
   constant, or narrating control flow.
-- **Cite, don't duplicate.** DESIGN.md is the source of truth. A comment points at
+- **Cite, don't duplicate.** DECISIONS.md is the source of truth. A comment points at
   `(§2.2)`; it never reproduces the formula, the rationale, or the trade-off, because then
   a change to the document has two places to land and they drift.
 - **Length isn't the criterion.** A long comment explaining why CI runs typecheck from the
@@ -80,7 +80,7 @@ active verb. Keep every number, term and identifier exact — the precision is n
 prose hard to read. Wrap at ~90 columns to match the surrounding paragraphs. Every line earns
 its place.
 
-Every figure in DESIGN.md is either a dated measurement or derived from a stated bound. A
+Every figure in DECISIONS.md is either a dated measurement or derived from a stated bound. A
 number that is true on day one and false after a week of running is a bug in the document.
 
 ## Stack
