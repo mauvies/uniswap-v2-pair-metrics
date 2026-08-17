@@ -27,10 +27,7 @@ export const EXIT_OK = 0;
 export const EXIT_PAIR_FAILED = 1;
 export const EXIT_ABORTED = 2;
 
-/**
- * 2 rather than 1 when nothing was attempted at all: whoever is on call needs to know
- * whether any pair got as far as a write.
- */
+/** 2, not 1, when no pair was even attempted: on-call needs to know if anything was written. */
 export function exitCodeFor(summary: RunSummary): number {
   if (summary.aborted !== undefined) {
     return EXIT_ABORTED;
@@ -112,7 +109,7 @@ async function ingestPair(
 
     return { pair: address, kind: "written", attempted: rows.length, written: written.length };
   } catch (error) {
-    // The other pair's transaction has already committed, or will; only this one is lost.
+    // Each pair writes in its own transaction, so only this pair is lost.
     log({ level: "error", event: "pair.failed", pair: address, reason: String(error) });
 
     return { pair: address, kind: "failed", reason: String(error) };

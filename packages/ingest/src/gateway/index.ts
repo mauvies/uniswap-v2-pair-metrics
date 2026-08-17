@@ -12,8 +12,8 @@ import { envelope, type Meta, metaResponse, type PairHour, pairHoursResponse } f
 
 const META_QUERY = `{ _meta { block { timestamp } hasIndexingErrors } }`;
 
-// Explicit `first` and ascending order, so exceeding the page limit returns a contiguous
-// prefix the next run resumes from rather than an arbitrary slice (§9).
+// Explicit `first` and ascending order, so passing the page limit returns a contiguous
+// prefix the next run resumes from, not an arbitrary slice (§9).
 const PAIR_HOURS_QUERY = `
   query PairHours($pair: String!, $from: Int!, $to: Int!, $first: Int!) {
     pairHourDatas(
@@ -96,7 +96,7 @@ export function createGateway(options: GatewayOptions): Gateway {
       return { ok: false, failure: invalidShape(wrapper.error) };
     }
 
-    // Every error arrives inside HTTP 200, auth included (§1), so the body decides.
+    // A 200 can still carry errors (§1).
     const { data, errors } = wrapper.data;
 
     if (errors !== undefined && errors.length > 0) {

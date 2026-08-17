@@ -20,6 +20,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   });
 
   return {
+    // The API key is a path segment of this URL. Never log the URL itself.
     gatewayUrl: `https://gateway.thegraph.com/api/${parsed.THEGRAPH_API_KEY}/subgraphs/id/${SUBGRAPH_ID}`,
     databaseUrl: parsed.DATABASE_URL,
   };

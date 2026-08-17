@@ -1,19 +1,20 @@
-/** Two epochs of finality (~12.8 min) plus room for indexing lag (measured 22 s and 35 s). */
+/** Two epochs of finality, plus room for indexer lag (§5.2). */
 export const FINALITY_MARGIN_SECONDS = 900;
 
-/** The gateway served exactly this many rows for `first: 1000` (§9). */
+/** The gateway's own limit: `first: 1000` returned exactly this many (§9). */
 export const PAGE_SIZE = 1000;
 
 export const BACKFILL_HOURS = 48;
 
-/** Below FINALITY_MARGIN_SECONDS, so it warns before there is damage rather than after (§8). */
+/** Lower than FINALITY_MARGIN_SECONDS, so it warns before the data is wrong (§8). */
 export const LAG_WARN_SECONDS = 600;
 
 export const RETRY_ATTEMPTS = 3;
+
 export const RETRY_BACKOFF_MS = [250, 500] as const;
 
 /**
- * A hung socket outlives a one-shot process, leaving a scheduler with an invocation that
- * never returns. The abort classifies as transport, so a slow gateway still gets retries.
+ * Without a timeout, a hung request keeps this one-shot process alive for good. The abort
+ * counts as a transport failure, so a slow gateway is still retried.
  */
 export const REQUEST_TIMEOUT_MS = 10_000;

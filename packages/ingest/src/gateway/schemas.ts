@@ -2,18 +2,13 @@ import { HOUR_SECONDS } from "@uniswap-v2-pair-metrics/shared";
 import { z } from "zod";
 
 /**
- * Plain decimal, no sign and no exponent: the shape verified on 2026-08-13 across the whole
- * range the two pairs span, from `"0.000000008423729439481026545405760632628317"` to
- * `"17594144.06839686623525025832575509"`. Matching only decides whether to admit the
- * string; it is stored unparsed (§3).
+ * Plain decimal: no sign, no exponent. Verified on 2026-08-13 over the whole range the two
+ * pairs span, from `"0.000000008423729439481026545405760632628317"` to
+ * `"17594144.06839686623525025832575509"`. The string is stored unparsed (§3).
  */
 const DECIMAL = /^\d+(\.\d+)?$/;
 
-/**
- * `NUMERIC` accepts `'NaN'` and `'Infinity'`, negatives are meaningless for a reserve or a
- * volume, and rows are immutable (§5.1) — so anything admitted here is permanent. This is
- * the only place that validation lives; §4 says why it is not repeated in DDL.
- */
+/** Finite and non-negative, checked here and nowhere else (§5.4). */
 const bigDecimal = z
   .string()
   .refine((value) => DECIMAL.test(value), "expected a finite non-negative decimal");
@@ -31,10 +26,7 @@ const hourStart = z
   .positive()
   .refine((value) => value % HOUR_SECONDS === 0, "expected an hour-aligned epoch");
 
-/**
- * What wraps every GraphQL reply. Errors arrive here rather than in the status (§1), so
- * this is what decides whether a 200 was a success.
- */
+/** Errors arrive in the body, not the status (§1), so this decides whether a 200 succeeded. */
 export const envelope = z.object({
   // A reply carrying errors omits `data` entirely, so neither key can be required.
   data: z.unknown().optional(),

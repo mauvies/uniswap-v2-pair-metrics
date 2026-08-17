@@ -8,8 +8,7 @@ const startedAt = Date.now();
 
 async function main(): Promise<number> {
   const config = loadConfig();
-  // Pairs are processed one at a time; the second connection bounds the damage if that
-  // ever stops being true.
+  // Pairs run one at a time. The second connection caps the damage if that ever changes.
   const pool = createPool(config.databaseUrl, { max: 2 });
   const db = createDb(pool);
   const gateway = createGateway({ url: config.gatewayUrl });
@@ -29,8 +28,8 @@ async function main(): Promise<number> {
 
     return exitCode;
   } finally {
-    // An open pg socket keeps the event loop alive, and a one-shot process that never
-    // exits is worse for a scheduler than one that fails.
+    // An open pg socket keeps the event loop alive. For a scheduler, a one-shot process
+    // that never exits is worse than one that fails.
     await pool.end();
   }
 }

@@ -1,9 +1,8 @@
 import { RETRY_BACKOFF_MS } from "../constants.ts";
 
 /**
- * By cause rather than by status: this gateway answers HTTP 200 with an `errors` array for
- * every failure, auth included (§1), so reading the status alone would classify an expired
- * key as success.
+ * Grouped by cause, not by HTTP status. The gateway answers 200 with an `errors` array for
+ * every failure, auth included (§1), so the status alone would read an expired key as success.
  */
 export type GatewayFailure =
   | { kind: "transport"; cause: unknown }
@@ -25,8 +24,8 @@ export class GatewayError extends Error {
 }
 
 /**
- * Retry only what a second attempt could answer differently. Exhaustive with no `default`,
- * so adding a variant without deciding its verdict fails to compile.
+ * Retry only what a second attempt could answer differently. No `default` case, so a new
+ * variant fails to compile until someone decides its verdict.
  */
 export function isRetryable(failure: GatewayFailure): boolean {
   switch (failure.kind) {
@@ -34,8 +33,7 @@ export function isRetryable(failure: GatewayFailure): boolean {
     case "rate-limited":
     case "server-error":
       return true;
-    // Our request, our key, or a contract change. A second identical attempt spends quota
-    // to be told the same thing.
+    // Our request, our key, or a changed contract. Retrying spends quota to hear the same answer.
     case "http-error":
     case "malformed-body":
     case "graphql-errors":

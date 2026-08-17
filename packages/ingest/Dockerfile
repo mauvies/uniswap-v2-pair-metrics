@@ -1,5 +1,4 @@
-# No build stage: Node 24 runs the TypeScript directly (§3), so the image is the source
-# plus its dependencies.
+# No build stage: Node 24 runs the TypeScript directly (§3).
 FROM node:24-alpine
 
 RUN corepack enable
@@ -11,8 +10,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/ingest/package.json packages/ingest/
 
-# `...` pulls in the workspace dependencies of ingest, and nothing else. `--prod` keeps the
-# toolchain out: nothing here transpiles, lints or tests, so biome, vitest, typescript and
+# `...` adds the workspace dependencies of ingest, nothing more. `--prod` drops the
+# toolchain: nothing here builds, lints or tests, so biome, vitest, typescript and
 # drizzle-kit would be 160 MB of image that never runs.
 RUN pnpm install --frozen-lockfile --prod --filter @uniswap-v2-pair-metrics/ingest...
 

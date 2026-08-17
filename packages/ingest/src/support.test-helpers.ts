@@ -4,8 +4,8 @@ import { createGateway } from "./gateway/index.ts";
 import type { LogLine } from "./log.ts";
 
 /**
- * A wall clock four hours past HOUR, and the upper bound it produces: the margin eats the
- * fourth hour, so the newest fetchable hour is HOUR + 2h and the window closes at HOUR + 3h.
+ * A wall clock four hours past HOUR. The margin eats the fourth hour, so the window ends at
+ * HOUR + 3h and the newest fetchable hour is HOUR + 2h.
  */
 export const NOW = HOUR + 4 * HOUR_SECONDS;
 export const CURRENT_HOUR = HOUR + 3 * HOUR_SECONDS;
