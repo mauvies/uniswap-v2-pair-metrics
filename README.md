@@ -40,19 +40,20 @@ that need one bring it up.
 ```sh
 pnpm dev           # the whole stack: one ingest run, the API, the dashboard
 pnpm down          # stop the containers it left running
-
 pnpm test          # all tests, against a database of their own
-pnpm check         # lint and format
-pnpm typecheck
-pnpm ingest        # one ingest run
-pnpm api           # the metrics service on http://127.0.0.1:3000
-pnpm web           # the dashboard on http://localhost:4000
 
 pnpm db:up         # Postgres 17 on localhost:5432
 pnpm db:down       # stop it; `pnpm db:down -v` drops the data with it
 pnpm db:migrate    # apply migrations, starting the database if it is down
 pnpm db:reset      # delete the volume with every row in it, then migrate from scratch
 pnpm db:generate   # regenerate after editing packages/shared/src/db/schema.ts
+
+pnpm ingest        # one ingest run
+pnpm api           # the metrics service on http://127.0.0.1:3000
+pnpm web           # the dashboard on http://localhost:4000
+
+pnpm check         # lint and format
+pnpm typecheck
 ```
 
 Export `POSTGRES_PORT` if 5432 is taken; the container, the migrations, the tests and the
