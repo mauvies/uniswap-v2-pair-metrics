@@ -81,9 +81,10 @@ database and waits until it is healthy, and builds the image the first time, but
 pairs fail and it exits `1`. The image holds a copy of the source, so rebuild it with
 `docker compose build ingest` after editing `packages/ingest` or `packages/shared`.
 
-Schedule either with `15 * * * *`, not on the hour: hours are stored once they clear a
-15-minute finality margin, so an on-the-hour run would always find the newest hour too
-recent (`docs/DECISIONS.md` §5.2).
+Nothing here runs it on a cadence, by design: the 60-minute guard is inside the process, so
+the scheduler can be whatever the deployment already runs (`docs/DECISIONS.md` §9). Give it
+`15 * * * *` rather than `0 * * * *` — hours are stored once they clear a 15-minute finality
+margin, so an on-the-hour run would always find the newest hour too recent (§5.2).
 
 Exit codes: `0` collected or nothing to do, `1` at least one pair failed and the others are
 committed, `2` aborted before any was attempted. One JSON line per event to stdout, errors

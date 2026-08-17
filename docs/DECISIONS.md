@@ -408,9 +408,11 @@ is older than the threshold* — produces every case, with no special branches:
 The 60-minute guard lives inside the process, so frequent invocation is safe — the process
 decides whether there is anything to do. Two invocation modes, one entry point:
 `pnpm ingest` against a database on localhost, and `docker compose run --rm ingest` against
-the compose network — either driven by a cron line. Nothing sleeps or loops internally.
-The cron line is `15 * * * *`, not `0 * * * *`: on the hour the newest hour has not cleared
-the margin yet, so every run would find nothing and each write would land an hour late.
+the compose network. Nothing sleeps or loops internally, and nothing here invokes either on
+a cadence: the operator's scheduler does, and the guard is what keeps that choice theirs
+(§9). The line to recommend is `15 * * * *`, not `0 * * * *`: on the hour the newest hour
+has not cleared the margin yet, so every run would find nothing and each write would land an
+hour late.
 
 ---
 
@@ -726,6 +728,13 @@ pair dead since 2022 on every run. Rejected: the flag is run-state of exactly th
 avoids, and it needs a mechanism to clear itself or a revived pair never recovers. One
 request per run returning an empty array is not a cost worth mutable state. With dozens of
 inactive pairs the answer would be a recorded last-attempt with backoff, not a boolean.
+
+**Shipping a scheduler.** A compose service on a profile could loop the binary every few
+minutes, so a reviewer watches the guard skip most runs and write one an hour instead of
+reading that it would. Rejected: the guard lives inside the process precisely so the
+scheduler can be trivial (§5.5), and shipping one decides for the operator — a real
+deployment has a platform scheduler already, and none of them wants a sleep loop baked into
+an image. The README recommends the cron line instead.
 
 **A `window` query parameter.** Rejected in favour of returning all three windows (§6.2).
 
