@@ -18,10 +18,10 @@ const query = z.object({
 });
 
 /**
- * Fastify's default handler reads `statusCode` off the error and serialises
- * `{ statusCode, error, message }` — the shape its own router already returns for an
- * unknown route. It also logs anything at 500 or above, which is why nothing here logs
- * explicitly; `/health` has to, because it returns its 503 as a body rather than throwing.
+ * Fastify's default handler reads `statusCode` off the error and answers
+ * `{ statusCode, error, message }` — the shape its router already uses for an unknown route.
+ * It also logs anything at 500 or above, so nothing here logs. `/health` does log, because
+ * it returns its 503 as a body instead of throwing.
  */
 function httpError(statusCode: number, message: string): Error {
   return Object.assign(new Error(message), { statusCode });
@@ -50,8 +50,8 @@ export function registerMetrics(app: FastifyInstance, db: Db): void {
     const fromHour = from === undefined ? undefined : floorToHour(from);
     const toHour = to === undefined ? undefined : floorToHour(to);
 
-    // Only when the client supplied both: a bound that fell back to the stored extent
-    // cannot be a client error, and reads as an empty intersection instead (§6.1).
+    // Only when the client sent both. A bound that fell back to the stored extent is not a
+    // client error; it reads as an empty intersection instead (§6.1).
     if (fromHour !== undefined && toHour !== undefined && fromHour > toHour) {
       throw httpError(400, "from is after to");
     }
@@ -78,14 +78,12 @@ export function registerMetrics(app: FastifyInstance, db: Db): void {
 }
 
 /**
- * 503 rather than the 500 an unhandled rejection would produce, for the same reason
- * `/health` answers 503: the service is up and the dependency is not (§6.1).
+ * Returns 503 instead of 500 to signal that the service is up
+ * but its database dependency is unavailable (§6.1).
  *
- * The message reports the read that failed, not why. Both statements are fixed and take the
- * range only as parameters, so what is reachable here is the pool's connect timeout, a
- * refused connection or a terminated one — all of them availability. Reading SQLSTATE to
- * separate those from a malformed statement would be a second classifier (§5.4) guarding a
- * condition this path cannot reach, and `cause` already carries the original.
+ * Assumes all failures on these fixed queries are availability issues
+ * (timeouts, connection refused). We skip inspecting `SQLSTATE` (§5.4)
+ * to avoid unnecessary complexity; the original error is preserved in `cause`.
  */
 async function reachDatabase<T>(query: Promise<T>): Promise<T> {
   try {

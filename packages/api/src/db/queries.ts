@@ -5,8 +5,8 @@ import { and, asc, eq, lte, max, min, sql } from "drizzle-orm";
 import type { StoredExtent } from "../series.ts";
 
 /**
- * The newest stored hour of every pair that has one. A pair with no rows is absent from
- * the map rather than zero, which is what `/health` reports as `null` (§6.1).
+ * The newest stored hour of every pair that has one. A pair with no rows is absent rather
+ * than zero, which `/health` reports as `null` (§6.1).
  */
 export async function latestStoredHours(db: Db): Promise<Map<string, number>> {
   const rows = await db
@@ -40,13 +40,9 @@ export async function storedExtent(db: Db, pairAddress: string): Promise<StoredE
 }
 
 /**
- * Every row a range needs, ascending: the window `[lookbackFrom, toHour]` and — the part
- * that is easy to leave out — the newest row at or before `lookbackFrom`.
- *
- * That row anchors the reconstruction (§6.1). A pair can be quiet for longer than the
- * lookback, and `hour_start_unix >= lookbackFrom` alone would then start the series inside
- * the requested range, so its first points come back as warm-up `null` when their windows
- * are really full of quiet hours (§2.3).
+ * Every row a range needs, ascending: the window `[lookbackFrom, toHour]`, plus the newest
+ * row at or before `lookbackFrom`. That anchor row is the easy one to leave out, and §6.1
+ * says what breaks without it.
  *
  * One statement rather than two, so the anchor and the window cannot come from different
  * snapshots.
@@ -62,8 +58,8 @@ export async function storedSeries(
       where ${pairHourMetrics.pairAddress} = ${pairAddress}
         and ${pairHourMetrics.hourStartUnix} <= ${lookbackFrom}), ${lookbackFrom})`;
 
-  // Columns named rather than `select()`: `ingested_at` is storage-only (§4), and pulling
-  // it back would put it one spread away from the response.
+  // Columns named rather than `select()`: `ingested_at` is storage-only (§4), and pulling it
+  // back would leave it one spread away from the response.
   return db
     .select({
       pairAddress: pairHourMetrics.pairAddress,

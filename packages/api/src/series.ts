@@ -37,10 +37,7 @@ export function lookbackStart(fromHour: number): number {
   return fromHour - LOOKBACK_HOURS * HOUR_SECONDS;
 }
 
-/**
- * The requested range against what is stored: an absent bound falls back to the stored
- * extent, and a range that does not overlap it at all resolves to nothing (§6.1).
- */
+/** An absent bound falls back to the stored extent; no overlap at all resolves to null (§6.1). */
 export function resolveHours(
   extent: StoredExtent,
   from: number | undefined,
@@ -57,8 +54,8 @@ export function resolveHours(
 }
 
 /**
- * Reconstruct, annualise, then drop the lookback: the hours before `fromHour` exist to fill
- * the windows of the points that follow them, and are not part of the answer (§6.1).
+ * Reconstruct, annualise, then drop the lookback. The hours before `fromHour` only fill the
+ * windows of the points after them; they are not part of the answer (§6.1).
  */
 export function buildPoints(rows: readonly PairHourRow[], fromHour: number): MetricPoint[] {
   const series = reconstructSeries(rows);
@@ -67,8 +64,7 @@ export function buildPoints(rows: readonly PairHourRow[], fromHour: number): Met
   return aprSeries.flatMap((apr, index) => {
     const hour = series[index];
 
-    // `computeAprSeries` returns one entry per hour; the check is what the compiler needs
-    // to read the index, not a case that can happen.
+    // One entry per hour, so this check is for the compiler, not a case that can happen.
     if (hour === undefined || hour.hourStartUnix < fromHour) {
       return [];
     }

@@ -29,8 +29,8 @@ export function registerHealth(app: FastifyInstance, db: Db): void {
 
     const nowInSeconds = Math.floor(Date.now() / 1000);
 
-    // `ok` is the verdict a monitor reads and `db` the dependency that decided it. The
-    // database is the only one, so today they cannot disagree.
+    // `ok` is the verdict a monitor reads, `db` the dependency behind it. The database is
+    // the only dependency, so today the two cannot disagree.
     return {
       ok: true,
       db: true,
@@ -40,12 +40,11 @@ export function registerHealth(app: FastifyInstance, db: Db): void {
 }
 
 /**
- * Age runs from the *end* of the last stored hour, the reference ingest's staleness guard
- * uses (§5.1) — so this is the number that decides whether a run is due, not a second one
- * that resembles it.
+ * Age runs from the *end* of the last stored hour, the same reference ingest's staleness
+ * guard uses (§5.1). One number decides whether a run is due, not two that resemble each other.
  *
- * Both fields are null for a pair with no rows: the table cannot say why it is empty, and
- * an age counted from nothing would read as a multi-year outage (§6.1).
+ * A pair with no rows reports null for both: an age counted from nothing would read as a
+ * multi-year outage (§6.1).
  */
 function pairHealth(
   address: string,
