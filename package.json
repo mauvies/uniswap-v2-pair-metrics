@@ -19,6 +19,7 @@
     "ingest": "pnpm db:migrate && pnpm --filter @uniswap-v2-pair-metrics/ingest start",
     "api": "pnpm db:migrate && pnpm --filter @uniswap-v2-pair-metrics/api start",
     "web": "pnpm --filter @uniswap-v2-pair-metrics/web dev",
+    "web:preview": "pnpm --filter @uniswap-v2-pair-metrics/web build && pnpm --filter @uniswap-v2-pair-metrics/web preview",
     "test": "sh scripts/test.sh",
     "check": "biome check .",
     "check:fix": "biome check --write .",

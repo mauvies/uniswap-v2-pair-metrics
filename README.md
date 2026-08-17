@@ -51,6 +51,7 @@ pnpm db:generate   # regenerate after editing packages/shared/src/db/schema.ts
 pnpm ingest        # one ingest run
 pnpm api           # the metrics service on http://127.0.0.1:3000
 pnpm web           # the dashboard on http://localhost:4000
+pnpm web:preview   # build the dashboard and serve the bundle on http://localhost:4173
 
 pnpm check         # lint and format
 pnpm typecheck
