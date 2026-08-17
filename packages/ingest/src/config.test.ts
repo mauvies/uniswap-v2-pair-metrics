@@ -3,8 +3,8 @@ import { loadConfig } from "./config.ts";
 
 describe("loadConfig", () => {
   it("names the variable that is missing", () => {
-    expect(() => loadConfig({})).toThrow(/THEGRAPH_API_KEY/);
-    expect(() => loadConfig({ THEGRAPH_API_KEY: "" })).toThrow(/API key is required/);
+    expect(() => loadConfig({})).toThrow(/THEGRAPH_API_KEY is not set/);
+    expect(() => loadConfig({ THEGRAPH_API_KEY: "" })).toThrow(/THEGRAPH_API_KEY is not set/);
   });
 
   it("builds the gateway URL around the key", () => {
