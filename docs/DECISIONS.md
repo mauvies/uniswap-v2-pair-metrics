@@ -165,9 +165,9 @@ unambiguous for any reviewer, no DST.
 
 ```
 packages/
-  shared/   domain and contract types, pair constants, APR function, schema, connection pool
+  shared/   domain and contract types, pair constants, schema, connection pool
   ingest/   one-shot: subgraph client, staleness guard, upsert
-  api/      pair metrics over a date range
+  api/      reconstruction, APR, pair metrics over a date range
   web/      dashboard and APR chart
 ```
 
@@ -206,8 +206,9 @@ application code run without a transpiler — it is the runtime half of the deci
 `engine-strict` turns an older runtime into an error `pnpm install` can explain, rather than
 a parse error at first import.
 
-**APR is computed in JS, in `shared`, not in SQL.** Window functions get awkward once the
-series has gaps, and a pure function can be tested against hand-computed fixtures.
+**APR is computed in JS, not in SQL.** Window functions get awkward once the series has
+gaps, and a pure function can be tested against hand-computed fixtures. It lives in `api`,
+its only consumer: `shared` holds what two packages depend on, and nothing else reads it.
 
 **Precision.** Subgraph returns strings → `NUMERIC` columns → Drizzle returns strings. No
 float touches the persistence path. `Number()` is called in exactly one place: inside the
@@ -689,8 +690,7 @@ and the UI. Ingesting only completed hours makes the case disappear (§5.1).
 
 **Computing APR in SQL with window functions.** Rejected: a SQL window frame counts rows,
 not hours, so every gap needs generated scaffold rows before the window can see it; and a
-pure function in `shared` tests against hand-computed fixtures with no database in the loop
-(§3).
+pure function tests against hand-computed fixtures with no database in the loop (§3).
 
 **A decimal library.** Rejected per the precision rule (§3): arithmetic is on USD values
 below 10⁸, where doubles have headroom. If a hand-computed fixture ever disagreed in
