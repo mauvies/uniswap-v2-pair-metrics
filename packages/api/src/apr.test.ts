@@ -1,8 +1,8 @@
+import type { PairHourRow } from "@uniswap-v2-pair-metrics/shared";
+import { FEE_RATE, HOUR_SECONDS } from "@uniswap-v2-pair-metrics/shared";
 import { describe, expect, it } from "vitest";
 import { computeAprSeries } from "./apr.ts";
-import { FEE_RATE, HOUR_SECONDS } from "./constants.ts";
-import { reconstructSeries } from "./reconstruct.ts";
-import type { PairHourRow, ReconstructedHour } from "./types.ts";
+import { type ReconstructedHour, reconstructSeries } from "./reconstruct.ts";
 
 const BASE_HOUR = 1_786_525_200;
 

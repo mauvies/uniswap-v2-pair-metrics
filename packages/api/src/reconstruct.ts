@@ -1,5 +1,18 @@
-import { HOUR_SECONDS } from "./constants.ts";
-import type { PairHourRow, ReconstructedHour } from "./types.ts";
+import type { PairHourRow } from "@uniswap-v2-pair-metrics/shared";
+import { HOUR_SECONDS } from "@uniswap-v2-pair-metrics/shared";
+
+/** One entry per hour, no holes. `imputed` marks an hour the subgraph never wrote (§2.3). */
+export interface ReconstructedHour {
+  hourStartUnix: number;
+  reserve0: string;
+  reserve1: string;
+  reserveUsd: string;
+  volumeToken0: string;
+  volumeToken1: string;
+  volumeUsd: string;
+  feesUsd: string;
+  imputed: boolean;
+}
 
 /**
  * Fills quiet hours between stored rows (§2.3).

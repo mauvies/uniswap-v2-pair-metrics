@@ -18,19 +18,6 @@ export interface PairHourRow {
   hourlyTxns: number;
 }
 
-/** One entry per hour, no holes. `imputed` marks an hour the subgraph never wrote (§2.3). */
-export interface ReconstructedHour {
-  hourStartUnix: number;
-  reserve0: string;
-  reserve1: string;
-  reserveUsd: string;
-  volumeToken0: string;
-  volumeToken1: string;
-  volumeUsd: string;
-  feesUsd: string;
-  imputed: boolean;
-}
-
 export interface Pair {
   address: string;
   token0Symbol: string;

@@ -1,5 +1,6 @@
-import { APR_WINDOWS, HOURS_PER_YEAR } from "./constants.ts";
-import type { AprByWindow, AprWindow, ReconstructedHour } from "./types.ts";
+import type { AprByWindow, AprWindow } from "@uniswap-v2-pair-metrics/shared";
+import { APR_WINDOWS, HOURS_PER_YEAR } from "@uniswap-v2-pair-metrics/shared";
+import type { ReconstructedHour } from "./reconstruct.ts";
 
 const OUTPUT_DECIMALS = 3;
 

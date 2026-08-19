@@ -2,15 +2,11 @@ import type {
   AprByWindow,
   MetricPoint,
   PairHourRow,
-  ReconstructedHour,
   ResolvedRange,
 } from "@uniswap-v2-pair-metrics/shared";
-import {
-  APR_WINDOWS,
-  computeAprSeries,
-  HOUR_SECONDS,
-  reconstructSeries,
-} from "@uniswap-v2-pair-metrics/shared";
+import { APR_WINDOWS, HOUR_SECONDS } from "@uniswap-v2-pair-metrics/shared";
+import { computeAprSeries } from "./apr.ts";
+import { type ReconstructedHour, reconstructSeries } from "./reconstruct.ts";
 
 /** Enough history behind the first point to fill the widest window, and no more (§6.2). */
 export const LOOKBACK_HOURS = Math.max(...APR_WINDOWS) - 1;
