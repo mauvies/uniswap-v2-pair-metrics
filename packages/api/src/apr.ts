@@ -13,11 +13,11 @@ const OUTPUT_DECIMALS = 3;
  * rather than throwing an error.
  */
 export function computeAprSeries(series: readonly ReconstructedHour[]): AprByWindow[] {
-  return series.map((point, index) => {
+  return series.map((_, index) => {
     const apr = {} as AprByWindow;
 
     for (const window of APR_WINDOWS) {
-      apr[window] = aprAt(series, point, index, window);
+      apr[window] = aprAt(series, index, window);
     }
 
     return apr;
@@ -26,7 +26,6 @@ export function computeAprSeries(series: readonly ReconstructedHour[]): AprByWin
 
 function aprAt(
   series: readonly ReconstructedHour[],
-  point: ReconstructedHour,
   index: number,
   window: AprWindow,
 ): number | null {
@@ -35,24 +34,28 @@ function aprAt(
     return null;
   }
 
-  const liquidity = Number(point.reserveUsd);
-  const fees = series
-    .slice(index - window + 1, index + 1)
-    .reduce((total, hour) => total + Number(hour.feesUsd), 0);
+  let yieldSum = 0;
 
-  // PostgreSQL NUMERIC accepts 'NaN', which propagates to JSON as null and
-  // could be misinterpreted as a valid warm-up state.
-  if (!Number.isFinite(liquidity) || !Number.isFinite(fees)) {
-    throw new Error(`non-finite reserveUsd or feesUsd in the ${window}h window at index ${index}`);
+  for (const hour of series.slice(index - window + 1, index + 1)) {
+    const fees = Number(hour.feesUsd);
+    const liquidity = Number(hour.reserveUsd);
+
+    // PostgreSQL NUMERIC accepts 'NaN', which propagates to JSON as null and
+    // could be misinterpreted as a valid warm-up state.
+    if (!Number.isFinite(fees) || !Number.isFinite(liquidity)) {
+      throw new Error(
+        `non-finite reserveUsd or feesUsd in the ${window}h window at index ${index}`,
+      );
+    }
+
+    if (liquidity <= 0) {
+      return null;
+    }
+
+    yieldSum += fees / liquidity;
   }
 
-  if (liquidity <= 0) {
-    return null;
-  }
-
-  const annualised = (fees / liquidity) * (HOURS_PER_YEAR / window) * 100;
-
-  return round(annualised);
+  return round((yieldSum / window) * HOURS_PER_YEAR * 100);
 }
 
 function round(value: number): number {

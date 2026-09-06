@@ -16,7 +16,7 @@ links to.
 |---|---|---|
 | The inactive pair ships in the config | an empty series is specified behaviour, not a degenerate path | [§1](#1-data-source) |
 | Fees are 0.30% of volume | `feeTo` has never been activated on mainnet, and there is no RPC here to check | [§2.1](#21-fees-are-030-of-volume--decided) |
-| Point-in-time liquidity in the denominator | matches convention, and is numerically indistinguishable on this data | [§2.2](#22-apr--decided) |
+| Per-hour yields averaged across the window | fees are earned against the liquidity of their own hour, not the window's last | [§2.2](#22-apr--decided) |
 | Gaps reconstructed on read, never stored | a missing hour reports that nothing happened, not that data is missing | [§2.3](#23-gaps-are-reconstructed-not-imputed--verified-premise-decided-handling) |
 | Warm-up points are `null` | a partial window changes what the number means | [§2.4](#24-warm-up-points-are-null--decided) |
 | No float on the persistence path | `Number()` is called in exactly one place, inside the APR function | [§3](#3-architecture) |
@@ -95,30 +95,27 @@ accurate for USDC/WETH, can understate exotic pairs.
 
 ### 2.2 APR — decided
 
+Revised 2026-09-06 after the submission review; the original denominator is in §9.
+
 ```
-                Σ feesUSD over the N hours ending at t        8760
-APR(t, N)  =  ───────────────────────────────────────────  ×  ────  ×  100
-                            reserveUSD(t)                        N
+                Σ feesUSD(i) / reserveUSD(i) over the N hours ending at t
+APR(t, N)  =  ───────────────────────────────────────────────────────────  ×  8760  ×  100
+                                          N
 ```
 
-Fees actually earned in the trailing N-hour window, scaled to a year, over the capital in
-the pool when that window closes: `reserveUSD(t)` is read at t itself, the final hour of
-the window. `N ∈ {1, 12, 24}` is the exercise's moving-average window.
-
-We use point-in-time reserveUSD to calculate APR because it matches industry standards and
-is easy to verify on-chain. Combining a flow over time (volume) with a single snapshot
-(reserves) is inherent to annualized rates. The two approaches only differ when liquidity
-changes within the window — by at most 0.097 percentage points on USDC/WETH, which moves
-under 1% a day. The moving-average selector smooths those variations across the chart (§9
-covers the window-averaged alternative).
+Each hour's fees were earned against that hour's liquidity, so each hour contributes its
+own yield and the window averages yields, never dollars. That makes the number a true
+moving average of the hourly APR, and it confines a zero-liquidity hour to the windows
+that contain it. `N ∈ {1, 12, 24}` is the exercise's moving-average window.
 
 Worked example, the 24 hours to 12 August 2026 09:00 UTC: $237,045 of volume × 0.003 =
-$711.135 in fees, × 365 = $259,564.275 a year. Over `reserveUSD(t)` = $17,689,023 that is
-**1.467%**; over the window mean of $17,585,645 it would be 1.476% — a 0.009-point
-difference, well inside the 0.1-point bound above. Reserves rose slightly across this
-window, so point-in-time reads marginally lower here; in a collapse it goes the other way,
-and far harder. 1.467% was the newest completed point at measurement and the 48-hour high —
-the top of the plotted range, not the average.
+$711.135 in fees, earned against hourly reserves averaging $17,585,645: **1.476%**
+annualised. The point-in-time version (§9) read 1.467% against `reserveUSD(t)` =
+$17,689,023 — 0.009 points apart, because reserves barely moved across this window. That
+closeness is a property of USDC/WETH in a quiet week, not of the formula: had liquidity
+fallen tenfold in the final hour, point-in-time would price all 24 hours of fees against
+the collapsed reserve and read near ten times too high, while per-hour yields scale only
+the hour that actually earned against less capital.
 
 ### 2.3 Gaps are reconstructed, not imputed — verified premise, decided handling
 
@@ -680,9 +677,13 @@ and each invariant is pinned by a test rather than asserted:
 
 ## 9. Considered and rejected
 
-**Window-averaged liquidity in the denominator.** Arguably more accurate over volatile
-ranges. Rejected: point-in-time matches convention, is easier to explain, and the two are
-numerically indistinguishable on this data (§2.2).
+**Point-in-time liquidity in the denominator.** `Σ fees ÷ reserveUSD(t)` — §2.2 as
+submitted, revised 2026-09-06. It matches the spot-APR convention (Uniswap's info site,
+DefiLlama) and sat 0.009 points from the revised formula on this data. But it prices every
+hour's fees against the final hour's capital, so a liquidity collapse at t inflates the
+whole window; and the convention covers a single live number, where the current TVL is the
+only denominator there is — not a charted series with every hour's reserves in the table
+(§2.2).
 
 **Storing the partial current hour with an `is_partial` flag.** Rejected: rows become
 mutable, the newest point understates APR for up to an hour, and the flag leaks into the API

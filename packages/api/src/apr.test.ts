@@ -27,12 +27,18 @@ function flat(count: number, feesUsd: string, reserveUsd?: string): Reconstructe
 
 describe("computeAprSeries", () => {
   it("matches the worked example in DECISIONS.md §2.2", () => {
-    // 24 hours to 2026-08-12 09:00 UTC: $237,045 of volume against $17,689,023 of
-    // reserves. Fees are $711.135, annualised $259,564 — 1.467% of the pool.
+    // 24 hours to 2026-08-12 09:00 UTC: $237,045 of volume, so $711.135 in fees, against
+    // hourly reserves of $17,585,645 — 1.476% annualised.
     const hourlyFees = (237_045 * FEE_RATE) / 24;
-    const series = flat(24, String(hourlyFees), "17689023");
+    const series = flat(24, String(hourlyFees), "17585645");
 
-    expect(computeAprSeries(series).at(-1)?.["24"]).toBe(1.467);
+    expect(computeAprSeries(series).at(-1)?.["24"]).toBe(1.476);
+  });
+
+  it("prices each hour's fees against that hour's own liquidity", () => {
+    const series = [...flat(11, "1", "8760"), hour(11, "1", "876")];
+
+    expect(computeAprSeries(series).at(-1)?.["12"]).toBe(175);
   });
 
   it("annualises each window over its own span", () => {
@@ -74,6 +80,18 @@ describe("computeAprSeries", () => {
     }
     // Never Infinity or NaN: both would serialise to null and silently change value.
     expect(JSON.parse(JSON.stringify(apr))).toEqual(apr);
+  });
+
+  it("a zero-liquidity hour nulls exactly the windows that contain it", () => {
+    const series = flat(24, "1", "8760").map((point, i) =>
+      i === 12 ? { ...point, reserveUsd: "0" } : point,
+    );
+    const apr = computeAprSeries(series);
+
+    expect(apr[12]?.["1"]).toBeNull();
+    expect(apr[23]?.["12"]).toBeNull();
+    expect(apr[11]?.["12"]).toBe(100);
+    expect(apr[23]?.["1"]).toBe(100);
   });
 
   it("apr over gapped series", () => {
