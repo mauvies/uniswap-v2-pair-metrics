@@ -377,11 +377,16 @@ Per pair, independently:
    lower bound is `effectiveCurrentHour − 48 × 3600` on the first run, `lastStored + 3600`
    after; half-open, so the in-progress hour is excluded and a first backfill spans
    **exactly 48 hours** of complete indexed time, whatever the indexer's lag. One
-   query whatever the gap: no branch for backfill versus incremental versus catch-up.
-   Explicit `first`, `orderBy: hourStartUnix` ascending (§9). `effectiveCurrentHour` is
-   computed once per run; an hour completing mid-run is picked up by the next.
+   query shape whatever the gap: no branch for backfill versus incremental versus
+   catch-up. Explicit `first`, `orderBy: hourStartUnix` ascending, and a cursor: pages
+   of 1,000 rows, each fetched from one past the last row of the page before, until a
+   short page ends the window — so a run drains any gap in one go (revised 2026-09-06;
+   the single-fetch original is in §9). `effectiveCurrentHour` is computed once per run;
+   an hour completing mid-run is picked up by the next.
 3. Validate with zod, then write in one transaction for that pair with
-   `INSERT … ON CONFLICT DO NOTHING`. A response that fails validation is never persisted.
+   `INSERT … ON CONFLICT DO NOTHING`, issued in statements of 5,000 rows: at nine bind
+   parameters per row, the driver's 65,535-parameter statement cap is a ceiling a
+   paginated catch-up can reach. A response that fails validation is never persisted.
 4. A failure on one pair leaves every other pair's committed data intact; the run exits
    non-zero and the failed pair heals on the next run.
 
@@ -627,7 +632,7 @@ behaviour.
 | `_meta` query fails | The classifier retries it like any request; if it still fails the run aborts writing nothing — no wall-clock fallback (§5.2) | `missing _meta aborts the run, writes nothing` |
 | Indexer reports `hasIndexingErrors: true` | Logged as a warning, ingest proceeds — the flag is subgraph-wide, with no per-pair or per-hour resolution to act on | `hasIndexingErrors → warning, run proceeds` |
 | Downtime leaves a hole the API would fill with fabricated zeros | Contiguity invariant (§2.3) | `resume after gap backfills every missing hour` |
-| Gap holding more than 1,000 rows (~41 days if every hour traded) outgrows one page — a bound on one fetch, distinct from the uncapped catch-up above | Explicit `first`, ascending order, so a truncated fetch is a contiguous prefix and the next run resumes; not paginated by decision (§9) | `truncated fetch leaves a contiguous series` |
+| Gap holding more than 1,000 rows (~41 days if every hour traded) outgrows one page | Cursor pagination: ascending pages fetched from one past the previous page's last row, until a short page; any gap drains in a single run (§5.5) | `drains a window longer than one page with a cursor` · `catch-up longer than one page completes in a single run` |
 | Crash mid-catch-up | The pair's transaction commits nothing; the next run recomputes its bounds from the table and converges | `crash mid-catch-up commits nothing, rerun converges` |
 | Gateway failures: transport, 429, 5xx, and GraphQL errors inside HTTP 200 | Classified retry — transport/429/5xx retried with backoff; body `errors` and zod failures fail fast; one transaction per pair; non-zero exit | `classifier cases` · `mid-run failure → no partial writes` · `one pair failing leaves the other committed` |
 | Invalid requests: `from > to`, malformed address, unknown pair, empty range | 400 / 400 / 404 / `200 []` — never a 500 | `validation and empty-range suite` |
@@ -697,14 +702,14 @@ pure function tests against hand-computed fixtures with no database in the loop 
 below 10⁸, where doubles have headroom. If a hand-computed fixture ever disagreed in
 the last digit, `big.js` is the narrow answer.
 
-**Paginating the fetch, with batched writes.** Only catch-up grows, and at most one row per
-hour, so the ceiling is the page limit of **1,000 rows** (`first: 1000` returned exactly
-that in testing) — ~41 days of downtime for a pair trading every hour, and even more calendar
-time for a quieter pair. Rejected as complexity for a scenario this system will not meet.
-Instead: an explicit `first` and ascending order, so an exceeded limit returns a contiguous
-prefix and the next run resumes from the advanced `MAX(hour_start_unix)`. If the window
-grew to weeks, the technique is cursor pagination on `hourStartUnix_gt` with a batched
-upsert per page — the same cursor mechanism the ingest already uses between runs.
+**One fetch per run, recovering across runs.** §5.5 as submitted, revised 2026-09-06 after
+the submission review. One query per pair at the gateway's page limit of **1,000 rows**
+(`first: 1000` returned exactly that in testing) returned a contiguous prefix of the gap,
+and the next run resumed from the advanced `MAX(hour_start_unix)`. Sound — never a hole —
+but capped at 1,000 rows per run while §2.3 promised uncapped catch-up, so recovery was a
+property of the schedule, not of the run: a job that must execute ⌈gap/1000⌉ times is not
+one that recovers however long it was down. The cursor loop that replaced it is a dozen
+lines against the same query (§5.5).
 
 **Ingesting at the indexer head, with no finality margin.** Simpler, and the chart's newest
 point would be 15 minutes fresher. Rejected: rows are immutable (§5.1), so an hour built

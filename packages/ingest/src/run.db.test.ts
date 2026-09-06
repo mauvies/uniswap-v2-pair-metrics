@@ -108,24 +108,19 @@ describe("run", () => {
     expect(stored.every((h, i) => i === 0 || h - (stored[i - 1] ?? 0) === HOUR_SECONDS)).toBe(true);
   });
 
-  it("truncated fetch leaves a contiguous series", async () => {
-    // A prefix of a longer gap, as an exceeded page limit returns (§9).
-    const prefix = consecutive(5);
-    const { gateway } = stubGateway({ hoursByPair: { [ACTIVE]: prefix } });
+  it("catch-up longer than one page completes in a single run", async () => {
+    const { gateway, windows } = stubGateway({
+      hoursByPair: { [ACTIVE]: consecutive(5) },
+      pageSize: 2,
+    });
 
     await run({ db, gateway, nowInSeconds: NOW, log: collectLogs().log });
 
     const stored = await storedHours();
     expect(stored).toHaveLength(5);
     expect(stored.every((h, i) => i === 0 || h - (stored[i - 1] ?? 0) === HOUR_SECONDS)).toBe(true);
-
-    // The next run resumes from the advanced MAX rather than re-fetching the prefix.
-    const second = stubGateway({ hoursByPair: { [ACTIVE]: [] } });
-    await run({ db, gateway: second.gateway, nowInSeconds: NOW, log: collectLogs().log });
-
-    expect(second.windows.find((w) => w.pair === ACTIVE)?.from).toBe(
-      (stored.at(-1) ?? 0) + HOUR_SECONDS,
-    );
+    // Pages of 2 + 2 + 1, all inside the one run.
+    expect(windows.filter((w) => w.pair === ACTIVE)).toHaveLength(3);
   });
 
   it("no stored row reaches the in-progress hour", async () => {
@@ -152,6 +147,15 @@ describe("run", () => {
 
     await expect(insertHours(db, rows)).rejects.toThrow();
     expect(await storedHours()).toEqual([]);
+  });
+
+  it("catch-up larger than the driver's bind-parameter cap still inserts", async () => {
+    // 7,300 rows × 9 parameters overruns the 65,535-parameter statement cap unless the
+    // insert is chunked (§5.5).
+    const rows = consecutive(7300).map((h) => toInsertRow(ACTIVE, { ...h, hourlyTxns: 12 }));
+
+    expect(await insertHours(db, rows)).toHaveLength(7300);
+    expect(await storedHours()).toHaveLength(7300);
   });
 
   it("one pair failing leaves the other committed", async () => {

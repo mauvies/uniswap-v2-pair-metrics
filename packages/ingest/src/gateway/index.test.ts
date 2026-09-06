@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { RETRY_ATTEMPTS } from "../constants.ts";
+import { wire } from "../support.test-helpers.ts";
 import { GatewayError } from "./failures.ts";
 import { createGateway } from "./index.ts";
 
@@ -101,6 +102,46 @@ describe("createGateway", () => {
     await expect(gateway.pairHours("0xb4e1", from, from + 3 * 3600)).rejects.toThrow(
       /not ascending/,
     );
+  });
+
+  it("drains a window longer than one page with a cursor", async () => {
+    const from = 1786525200;
+    const hours = Array.from({ length: 5 }, (_, i) => wire({ hourStartUnix: from + i * 3600 }));
+    const asked: number[] = [];
+
+    const fetch: typeof globalThis.fetch = async (_url, init) => {
+      const { variables } = JSON.parse(String(init?.body)) as {
+        variables: { from: number; to: number; first: number };
+      };
+      asked.push(variables.from);
+
+      const page = hours
+        .filter((h) => h.hourStartUnix >= variables.from && h.hourStartUnix < variables.to)
+        .slice(0, variables.first);
+
+      return new Response(JSON.stringify({ data: { pairHourDatas: page } }));
+    };
+
+    const gateway = createGateway({ url: URL, fetch, pageSize: 2, sleep });
+    const rows = await gateway.pairHours("0xb4e1", from, from + 10 * 3600);
+
+    expect(rows.map((r) => r.hourStartUnix)).toEqual(hours.map((h) => h.hourStartUnix));
+    // Pages of 2 + 2 + 1, each asked from one past the last row of the page before.
+    expect(asked).toEqual([from, from + 3600 + 1, from + 3 * 3600 + 1]);
+  });
+
+  it("rejects a server that ignores the cursor instead of looping forever", async () => {
+    const from = 1786525200;
+    const samePage = [wire({ hourStartUnix: from }), wire({ hourStartUnix: from + 3600 })];
+    const stub = alwaysAnswers({ data: { pairHourDatas: samePage } });
+    const gateway = createGateway({ url: URL, fetch: stub.fetch, pageSize: 2, sleep });
+
+    // The second page repeats rows below the advanced cursor, which the per-page window
+    // check rejects.
+    await expect(gateway.pairHours("0xb4e1", from, from + 10 * 3600)).rejects.toThrow(
+      /outside the requested window/,
+    );
+    expect(stub.requests).toHaveLength(2);
   });
 
   it("gives up after the last attempt", async () => {

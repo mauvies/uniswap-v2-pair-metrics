@@ -12,8 +12,8 @@ import { envelope, type Meta, metaResponse, type PairHour, pairHoursResponse } f
 
 const META_QUERY = `{ _meta { block { timestamp } hasIndexingErrors } }`;
 
-// Explicit `first` and ascending order, so passing the page limit returns a contiguous
-// prefix the next run resumes from, not an arbitrary slice (§9).
+// Explicit `first` and ascending order, so each page is a contiguous prefix of what
+// remains and the cursor in `pairHours` can walk the window (§5.5).
 const PAIR_HOURS_QUERY = `
   query PairHours($pair: String!, $from: Int!, $to: Int!, $first: Int!) {
     pairHourDatas(
@@ -146,15 +146,33 @@ export function createGateway(options: GatewayOptions): Gateway {
     },
 
     async pairHours(pair, from, to) {
-      const { pairHourDatas } = await query(pairHoursResponse, {
-        query: PAIR_HOURS_QUERY,
-        variables: { pair, from, to, first: pageSize },
-      });
+      const all: PairHour[] = [];
+      let cursor = from;
 
-      const hoursArray = pairHourDatas.map((row) => row.hourStartUnix);
-      assertFetchWindow(hoursArray, from, to);
+      while (true) {
+        const { pairHourDatas } = await query(pairHoursResponse, {
+          query: PAIR_HOURS_QUERY,
+          variables: { pair, from: cursor, to, first: pageSize },
+        });
 
-      return pairHourDatas;
+        // Checked per page against the cursor, so a server that ignores the filter and
+        // repeats rows throws here instead of pinning the loop.
+        assertFetchWindow(
+          pairHourDatas.map((row) => row.hourStartUnix),
+          cursor,
+          to,
+        );
+        all.push(...pairHourDatas);
+
+        const last = pairHourDatas.at(-1);
+
+        if (last === undefined || pairHourDatas.length < pageSize) {
+          return all;
+        }
+
+        // `hourStartUnix_gte`, so one past the last row already held.
+        cursor = last.hourStartUnix + 1;
+      }
     },
   };
 }

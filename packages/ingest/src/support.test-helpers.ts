@@ -39,6 +39,7 @@ export interface StubOptions {
   hoursByPair?: Record<string, ReturnType<typeof wire>[]>;
   meta?: { timestamp: number; hasIndexingErrors?: boolean } | "unavailable";
   failFor?: string;
+  pageSize?: number;
 }
 
 export interface Stubbed {
@@ -58,7 +59,7 @@ export function stubGateway(options: StubOptions = {}): Stubbed {
   const fetch: typeof globalThis.fetch = async (_url, init) => {
     const body = JSON.parse(String(init?.body)) as {
       query: string;
-      variables?: { pair: string; from: number; to: number };
+      variables?: { pair: string; from: number; to: number; first: number };
     };
 
     if (body.query.includes("_meta")) {
@@ -83,22 +84,26 @@ export function stubGateway(options: StubOptions = {}): Stubbed {
       );
     }
 
-    const { pair, from, to } = body.variables ?? { pair: "", from: 0, to: 0 };
+    const { pair, from, to, first } = body.variables ?? { pair: "", from: 0, to: 0, first: 0 };
     windows.push({ pair, from, to });
 
     if (options.failFor === pair) {
       return new Response("{}", { status: 500 });
     }
 
-    return new Response(
-      JSON.stringify({ data: { pairHourDatas: options.hoursByPair?.[pair] ?? [] } }),
-    );
+    // Honours the window and the page limit, so run-level tests exercise the real cursor.
+    const rows = (options.hoursByPair?.[pair] ?? [])
+      .filter((row) => row.hourStartUnix >= from && row.hourStartUnix < to)
+      .slice(0, first);
+
+    return new Response(JSON.stringify({ data: { pairHourDatas: rows } }));
   };
 
   return {
     gateway: createGateway({
       url: "https://example.test/api/KEY/subgraphs/id/X",
       fetch,
+      ...(options.pageSize === undefined ? {} : { pageSize: options.pageSize }),
       sleep: async () => {},
     }),
     windows,
