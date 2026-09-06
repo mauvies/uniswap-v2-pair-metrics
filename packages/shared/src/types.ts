@@ -2,9 +2,6 @@ import type { APR_WINDOWS } from "./constants.ts";
 
 export type AprWindow = (typeof APR_WINDOWS)[number];
 
-/** Keyed by window as a string so the shape survives JSON unchanged. */
-export type AprByWindow = Record<`${AprWindow}`, number | null>;
-
 export interface PairHourRow {
   pairAddress: string;
   hourStartUnix: number;
@@ -45,11 +42,13 @@ export interface MetricPoint {
   volumeUSD: string;
   feesUSD: string;
   imputed: boolean;
-  apr: AprByWindow;
+  apr: number | null;
 }
 
 export interface PairMetrics {
   pair: Pair;
+  /** The window served, which the response echoes because `window` may be defaulted. */
+  aprWindowHours: AprWindow;
   range: ResolvedRange | null;
   points: MetricPoint[];
 }

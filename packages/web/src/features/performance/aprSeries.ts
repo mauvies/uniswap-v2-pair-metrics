@@ -1,4 +1,4 @@
-import type { AprWindow, MetricPoint } from "@uniswap-v2-pair-metrics/shared";
+import type { MetricPoint } from "@uniswap-v2-pair-metrics/shared";
 
 export interface AprPoint {
   hourStartUnix: number;
@@ -11,10 +11,10 @@ export interface AprSeries {
   ticks: number[];
 }
 
-export function toAprSeries(points: readonly MetricPoint[], aprWindow: AprWindow): AprSeries {
+export function toAprSeries(points: readonly MetricPoint[]): AprSeries {
   const series: AprPoint[] = points.map((point) => ({
     hourStartUnix: point.hourStartUnix,
-    apr: point.apr[aprWindow],
+    apr: point.apr,
     imputed: point.imputed,
   }));
 

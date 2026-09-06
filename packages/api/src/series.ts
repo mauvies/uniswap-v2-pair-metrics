@@ -1,15 +1,12 @@
 import type {
-  AprByWindow,
+  AprWindow,
   MetricPoint,
   PairHourRow,
   ResolvedRange,
 } from "@uniswap-v2-pair-metrics/shared";
-import { APR_WINDOWS, HOUR_SECONDS } from "@uniswap-v2-pair-metrics/shared";
+import { HOUR_SECONDS } from "@uniswap-v2-pair-metrics/shared";
 import { computeAprSeries } from "./apr.ts";
 import { type ReconstructedHour, reconstructSeries } from "./reconstruct.ts";
-
-/** Enough history behind the first point to fill the widest window, and no more (§6.2). */
-export const LOOKBACK_HOURS = Math.max(...APR_WINDOWS) - 1;
 
 /** The oldest and newest hour stored for one pair. A pair with no rows has no extent. */
 export interface StoredExtent {
@@ -29,8 +26,9 @@ export function floorToHour(iso: string): number {
   return Math.floor(seconds / HOUR_SECONDS) * HOUR_SECONDS;
 }
 
-export function lookbackStart(fromHour: number): number {
-  return fromHour - LOOKBACK_HOURS * HOUR_SECONDS;
+/** Enough history behind the first point to fill the requested window, and no more (§6.2). */
+export function lookbackStart(fromHour: number, window: AprWindow): number {
+  return fromHour - (window - 1) * HOUR_SECONDS;
 }
 
 /** An absent bound falls back to the stored extent; no overlap at all resolves to null (§6.1). */
@@ -53,9 +51,13 @@ export function resolveHours(
  * Reconstruct, annualise, then drop the lookback. The hours before `fromHour` only fill the
  * windows of the points after them; they are not part of the answer (§6.1).
  */
-export function buildPoints(rows: readonly PairHourRow[], fromHour: number): MetricPoint[] {
+export function buildPoints(
+  rows: readonly PairHourRow[],
+  fromHour: number,
+  window: AprWindow,
+): MetricPoint[] {
   const series = reconstructSeries(rows);
-  const aprSeries = computeAprSeries(series);
+  const aprSeries = computeAprSeries(series, window);
 
   return aprSeries.flatMap((apr, index) => {
     const hour = series[index];
@@ -81,7 +83,7 @@ export function rangeOf(points: readonly MetricPoint[]): ResolvedRange | null {
   return { fromHourUnix: first.hourStartUnix, toHourUnix: last.hourStartUnix };
 }
 
-function toPoint(hour: ReconstructedHour, apr: AprByWindow): MetricPoint {
+function toPoint(hour: ReconstructedHour, apr: number | null): MetricPoint {
   return {
     hourStartUnix: hour.hourStartUnix,
     reserve0: hour.reserve0,

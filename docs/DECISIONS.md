@@ -25,7 +25,7 @@ links to.
 | Staleness read from `MAX(hour_start_unix)` | the data is its own cursor, with no run-state to drift ahead of it | [§5.3](#53-staleness-reference-is-maxhour_start_unix--decided) |
 | A hand-written failure classifier, no retry library | the classification, not the loop, is what is specific to this gateway | [§5.4](#54-subgraph-client--decided) |
 | `from` and `to` optional and inclusive | a missing bound is the stored extent, not an error | [§6.1](#61-contract) |
-| All three windows in every response | switching the moving average then needs no refetch | [§6.2](#62-all-three-windows-are-returned-per-point--decided) |
+| The moving-average window is a request parameter | compute and transfer one window, and read only the history it needs | [§6.2](#62-the-window-is-a-request-parameter--decided) |
 | Pairs as constants, no `pairs` table | two fixed addresses, whose only consumers are two labels | [§9](#9-considered-and-rejected) |
 | Postgres, not a document store | `Decimal128` is opt-in in BSON where `NUMERIC` is the default | [§9](#9-considered-and-rejected) |
 
@@ -419,15 +419,16 @@ hour late.
 ### 6.1 Contract
 
 ```
-GET /pairs/:address/metrics[?from=<ISO-8601>][&to=<ISO-8601>]
+GET /pairs/:address/metrics[?from=<ISO-8601>][&to=<ISO-8601>][&window=1|12|24]
 → 200 {
     pair:  { address, token0Symbol, token1Symbol },
+    aprWindowHours: 1 | 12 | 24,
     range: { fromHourUnix, toHourUnix },
     points: [{
       hourStartUnix, reserve0, reserve1, liquidityUSD,
       volumeToken0, volumeToken1, volumeUSD, feesUSD,
       imputed: boolean,
-      apr: { "1": number|null, "12": number|null, "24": number|null }
+      apr: number|null
     }]
   }
 
@@ -449,11 +450,11 @@ GET /health
   stored — so a client can see how far coverage actually extends. An empty intersection —
   a range wholly outside stored history, or a pair with no rows — returns `range: null`
   with `points: []`.
-- **The service reads 23 hours before `from`** so the first point has a complete 24-hour
-  window. Without it, the first points of any range are silently wrong. When `from − 23h`
-  reaches past `first_stored_hour`, the lookback truncates and the windows it cannot fill
-  are `null` — §2.4's warm-up, surfacing mid-range instead of at the start of history. Both
-  behaviours carry dedicated tests.
+- **The service reads `window − 1` hours before `from`** so the first point has a complete
+  window: 23 hours for `window=24`, none at all for `window=1`. Without it, the first points
+  of any range are silently wrong. When the lookback reaches past `first_stored_hour` it
+  truncates and the windows it cannot fill are `null` — §2.4's warm-up, surfacing mid-range
+  instead of at the start of history. Both behaviours carry dedicated tests.
 - **The lookback starts at the newest stored hour at or before `from − 23h`, not at
   `from − 23h`.** A pair can stay quiet for longer than the window, and
   `hour_start_unix >= from − 23h` then returns nothing before the requested range: the
@@ -490,8 +491,8 @@ for any other well-formed address, rather than ingesting on demand — the inges
 what is collected, and a read path that could trigger collection would make coverage depend
 on traffic.
 
-Errors: malformed address, unparseable dates or `from > to` → `400`; well-formed but
-unconfigured address → `404`; valid range with no data → `200` with an empty array, never a
+Errors: malformed address, unparseable dates, `from > to`, or a `window` outside
+`{1, 12, 24}` → `400`; well-formed but unconfigured address → `404`; valid range with no data → `200` with an empty array, never a
 `500`. A read that fails answers `503`, as `/health` does, and says only that the read
 failed: the statements are fixed and parameterised, so every failure this path can reach is
 the database being unavailable rather than a query being wrong.
@@ -500,18 +501,21 @@ Addresses are matched case-insensitively, so the EIP-55 form a block explorer ha
 resolves to the same pair as the lowercase one, and `pair.address` echoes back the stored
 lowercase form either way.
 
-### 6.2 All three windows are returned per point — decided
+### 6.2 The window is a request parameter — decided
 
-The moving-average selector is the exercise's one interactive control. Returning
-`apr: { "1": …, "12": …, "24": … }` per point makes switching instant, with no refetch.
+Revised 2026-09-06 after the submission review; the three-window response is in §9.
 
-The cost is three numbers per point instead of one, against the nine fields each point
-already carries — a small and *constant* fraction of the payload, whatever the range — plus
-three windowed sums over an array already in memory. That holds at any size the API can be
-asked for, which the alternative reasoning would not: the 48-hour figure bounds the initial
-backfill, not what the API serves. A `window` parameter would make every toggle a round
-trip to save that fraction. There is consequently no `window` parameter, and lookback is
-always 23 hours.
+`window` selects the moving average and defaults to 24, which is what the chart opens on.
+The response echoes the window served in `aprWindowHours`, because a client that omitted
+the parameter cannot otherwise know which one it got — the same reason `range` echoes the
+resolved interval (§6.1).
+
+Two consequences beyond the payload. The endpoint computes one windowed pass instead of
+three. And the lookback becomes the window's own, `window − 1` hours, so `window=1` reads
+no history behind `from` at all where the fixed 23-hour lookback read it for every request.
+
+The cost is a round trip when the selector changes. The web app keys its query on the
+window, so each one is fetched once and switching back is served from cache.
 
 ---
 
@@ -519,8 +523,9 @@ always 23 hours.
 
 Vite + React + TypeScript SPA. Function components and hooks throughout; the brief prefers
 hooks over classes "where possible", and nothing here needs a class. TanStack Query for
-fetching, keyed on `(pair, from)`: the range selector only moves the lower bound, and an
-absent `to` resolves to the newest stored hour (§6.1), which is what a live chart wants.
+fetching, keyed on `(pair, from, window)`: the range selector only moves the lower bound, an
+absent `to` resolves to the newest stored hour (§6.1), which is what a live chart wants, and
+each window is fetched once and cached (§6.2).
 Tailwind v4 with a CSS-first `@theme` built from values extracted from the Figma; those
 values and the icon set ship with the package.
 
@@ -566,7 +571,8 @@ reuse its styling: the moving-average window (1/12/24h) fills the right half of 
 which the design leaves empty, and the pair sits in the card header beside the title it
 changes. **The pair selector is our addition** — the Figma selects no pairs — and it is not
 optional: with the empty series an explicitly evaluated behaviour (§1), it is the only way a
-reviewer reaches that state in the UI. Switching the window never refetches (§6.2).
+reviewer reaches that state in the UI. Switching the window refetches once and is cached
+from then on (§6.2).
 
 **The range row is `24h / 2d / All`, not the design's eight.** This reverses an earlier
 decision here, which was to render all of `7d / 1m / 3m / 6m / 1y / YTD / Custom / All` and
@@ -737,7 +743,13 @@ scheduler can be trivial (§5.5), and shipping one decides for the operator — 
 deployment has a platform scheduler already, and none of them wants a sleep loop baked into
 an image. The README recommends the cron line instead.
 
-**A `window` query parameter.** Rejected in favour of returning all three windows (§6.2).
+**Returning all three windows per point.** §6.2 as submitted, revised 2026-09-06 after the
+submission review. `apr: { "1": …, "12": …, "24": … }` on every point made the selector
+instant with no refetch, at a small and constant fraction of the payload. Rejected: an API
+that computes and transfers three answers so the client can discard two is the wrong
+default, however cheap the surplus is here — and the fixed 23-hour lookback it forced made
+every request read history only the widest window uses. One round trip on a selector
+change, cached per window, is the better trade (§6.2).
 
 **A chart-shaped response.** Returning only `hourStartUnix`, `apr`, the USD figures and
 `imputed` would drop four strings per point. Rejected: the brief asks for a service that

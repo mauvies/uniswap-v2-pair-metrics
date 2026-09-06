@@ -1,15 +1,8 @@
-import type { PairHourRow } from "@uniswap-v2-pair-metrics/shared";
+import type { AprWindow, PairHourRow } from "@uniswap-v2-pair-metrics/shared";
 import { FEE_RATE, HOUR_SECONDS } from "@uniswap-v2-pair-metrics/shared";
 import { ACTIVE, HOUR } from "@uniswap-v2-pair-metrics/shared/test-helpers";
 import { describe, expect, it } from "vitest";
-import {
-  buildPoints,
-  floorToHour,
-  LOOKBACK_HOURS,
-  lookbackStart,
-  rangeOf,
-  resolveHours,
-} from "./series.ts";
+import { buildPoints, floorToHour, lookbackStart, rangeOf, resolveHours } from "./series.ts";
 
 function row(hourOffset: number, volumeUsd = "1000"): PairHourRow {
   return {
@@ -49,9 +42,11 @@ describe("floorToHour", () => {
 });
 
 describe("lookbackStart", () => {
-  it("reaches back one hour short of the widest window", () => {
-    expect(LOOKBACK_HOURS).toBe(23);
-    expect(lookbackStart(HOUR)).toBe(HOUR - 23 * HOUR_SECONDS);
+  it("reaches back one hour short of the window it serves", () => {
+    expect(lookbackStart(HOUR, 24)).toBe(HOUR - 23 * HOUR_SECONDS);
+    expect(lookbackStart(HOUR, 12)).toBe(HOUR - 11 * HOUR_SECONDS);
+    // A 1-hour window needs no history behind its first point.
+    expect(lookbackStart(HOUR, 1)).toBe(HOUR);
   });
 });
 
@@ -89,30 +84,30 @@ describe("resolveHours", () => {
 describe("buildPoints", () => {
   it("drops the lookback hours from the answer", () => {
     const fromHour = HOUR + 24 * HOUR_SECONDS;
-    const points = buildPoints(consecutive(30), fromHour);
+    const points = buildPoints(consecutive(30), fromHour, 24);
 
     expect(points).toHaveLength(6);
     expect(points[0]?.hourStartUnix).toBe(fromHour);
   });
 
-  it("fills the widest window when the lookback is complete", () => {
+  it("fills the window when the lookback is complete", () => {
     const fromHour = HOUR + 24 * HOUR_SECONDS;
-    const points = buildPoints(consecutive(30), fromHour);
 
-    expect(points[0]?.apr["24"]).not.toBe(null);
-    expect(points[0]?.apr["12"]).not.toBe(null);
+    expect(buildPoints(consecutive(30), fromHour, 24)[0]?.apr).not.toBe(null);
+    expect(buildPoints(consecutive(30), fromHour, 12)[0]?.apr).not.toBe(null);
   });
 
   it("leaves warm-up nulls when the lookback truncates at the start of history", () => {
-    const points = buildPoints(consecutive(48), HOUR);
+    const nulls = (window: AprWindow) =>
+      buildPoints(consecutive(48), HOUR, window).filter((point) => point.apr === null).length;
 
-    expect(points.filter((point) => point.apr["1"] === null)).toHaveLength(0);
-    expect(points.filter((point) => point.apr["12"] === null)).toHaveLength(11);
-    expect(points.filter((point) => point.apr["24"] === null)).toHaveLength(23);
+    expect(nulls(1)).toBe(0);
+    expect(nulls(12)).toBe(11);
+    expect(nulls(24)).toBe(23);
   });
 
   it("renames the persisted columns to the contract's names", () => {
-    const [point] = buildPoints([row(0)], HOUR);
+    const [point] = buildPoints([row(0)], HOUR, 1);
 
     expect(point).toEqual({
       hourStartUnix: HOUR,
@@ -124,12 +119,12 @@ describe("buildPoints", () => {
       volumeUSD: "1000",
       feesUSD: "3",
       imputed: false,
-      apr: { "1": expect.any(Number), "12": null, "24": null },
+      apr: expect.any(Number),
     });
   });
 
   it("marks the hours it reconstructed", () => {
-    const points = buildPoints([row(0), row(3)], HOUR);
+    const points = buildPoints([row(0), row(3)], HOUR, 1);
 
     expect(points.map((point) => point.imputed)).toEqual([false, true, true, false]);
   });
@@ -137,7 +132,7 @@ describe("buildPoints", () => {
 
 describe("rangeOf", () => {
   it("echoes the first and last hour served", () => {
-    expect(rangeOf(buildPoints(consecutive(5), HOUR))).toEqual({
+    expect(rangeOf(buildPoints(consecutive(5), HOUR, 1))).toEqual({
       fromHourUnix: HOUR,
       toHourUnix: HOUR + 4 * HOUR_SECONDS,
     });

@@ -1,5 +1,5 @@
-import type { PairHourRow } from "@uniswap-v2-pair-metrics/shared";
-import { FEE_RATE, HOUR_SECONDS } from "@uniswap-v2-pair-metrics/shared";
+import type { AprWindow, PairHourRow } from "@uniswap-v2-pair-metrics/shared";
+import { APR_WINDOWS, FEE_RATE, HOUR_SECONDS } from "@uniswap-v2-pair-metrics/shared";
 import { describe, expect, it } from "vitest";
 import { computeAprSeries } from "./apr.ts";
 import { type ReconstructedHour, reconstructSeries } from "./reconstruct.ts";
@@ -32,66 +32,65 @@ describe("computeAprSeries", () => {
     const hourlyFees = (237_045 * FEE_RATE) / 24;
     const series = flat(24, String(hourlyFees), "17585645");
 
-    expect(computeAprSeries(series).at(-1)?.["24"]).toBe(1.476);
+    expect(computeAprSeries(series, 24).at(-1)).toBe(1.476);
   });
 
   it("prices each hour's fees against that hour's own liquidity", () => {
     const series = [...flat(11, "1", "8760"), hour(11, "1", "876")];
 
-    expect(computeAprSeries(series).at(-1)?.["12"]).toBe(175);
+    expect(computeAprSeries(series, 12).at(-1)).toBe(175);
   });
 
   it("annualises each window over its own span", () => {
     // $1 of fees an hour against $8,760 of liquidity is exactly 100% a year, whatever
     // the window, because every hour earns the same.
     const series = flat(24, "1", "8760");
-    const last = computeAprSeries(series).at(-1);
 
-    expect(last?.["1"]).toBe(100);
-    expect(last?.["12"]).toBe(100);
-    expect(last?.["24"]).toBe(100);
+    for (const window of APR_WINDOWS) {
+      expect(computeAprSeries(series, window).at(-1)).toBe(100);
+    }
   });
 
   it("warm-up null counts", () => {
-    const apr = computeAprSeries(flat(48, "1", "8760"));
+    const series = flat(48, "1", "8760");
+    const nulls = (window: AprWindow) =>
+      computeAprSeries(series, window).filter((apr) => apr === null).length;
 
-    expect(apr.filter((point) => point["1"] === null)).toHaveLength(0);
-    expect(apr.filter((point) => point["12"] === null)).toHaveLength(11);
-    expect(apr.filter((point) => point["24"] === null)).toHaveLength(23);
+    expect(nulls(1)).toBe(0);
+    expect(nulls(12)).toBe(11);
+    expect(nulls(24)).toBe(23);
   });
 
   it("is null throughout when the series is shorter than the window", () => {
-    const apr = computeAprSeries(flat(10, "1", "8760"));
+    const series = flat(10, "1", "8760");
 
-    expect(apr).toHaveLength(10);
-    expect(apr.every((point) => point["12"] === null)).toBe(true);
-    expect(apr.every((point) => point["24"] === null)).toBe(true);
+    expect(computeAprSeries(series, 12)).toHaveLength(10);
+    expect(computeAprSeries(series, 12).every((apr) => apr === null)).toBe(true);
+    expect(computeAprSeries(series, 24).every((apr) => apr === null)).toBe(true);
     // The 1-hour window is complete from the first point.
-    expect(apr.every((point) => point["1"] !== null)).toBe(true);
+    expect(computeAprSeries(series, 1).every((apr) => apr !== null)).toBe(true);
   });
 
   it("zero liquidity → null", () => {
-    const apr = computeAprSeries(flat(24, "1", "0"));
+    const series = flat(24, "1", "0");
 
-    for (const point of apr) {
-      expect(point["1"]).toBeNull();
-      expect(point["12"]).toBeNull();
-      expect(point["24"]).toBeNull();
+    for (const window of APR_WINDOWS) {
+      const apr = computeAprSeries(series, window);
+
+      expect(apr.every((point) => point === null)).toBe(true);
+      // Never Infinity or NaN: both would serialise to null and silently change value.
+      expect(JSON.parse(JSON.stringify(apr))).toEqual(apr);
     }
-    // Never Infinity or NaN: both would serialise to null and silently change value.
-    expect(JSON.parse(JSON.stringify(apr))).toEqual(apr);
   });
 
   it("a zero-liquidity hour nulls exactly the windows that contain it", () => {
     const series = flat(24, "1", "8760").map((point, i) =>
       i === 12 ? { ...point, reserveUsd: "0" } : point,
     );
-    const apr = computeAprSeries(series);
-
-    expect(apr[12]?.["1"]).toBeNull();
-    expect(apr[23]?.["12"]).toBeNull();
-    expect(apr[11]?.["12"]).toBe(100);
-    expect(apr[23]?.["1"]).toBe(100);
+    expect(computeAprSeries(series, 1)[12]).toBeNull();
+    expect(computeAprSeries(series, 12)[23]).toBeNull();
+    expect(computeAprSeries(series, 12)[11]).toBe(100);
+    expect(computeAprSeries(series, 1)[23]).toBe(100);
   });
 
   it("apr over gapped series", () => {
@@ -112,15 +111,14 @@ describe("computeAprSeries", () => {
     }));
 
     const series = reconstructSeries(rows);
-    const apr = computeAprSeries(series);
 
     expect(series).toHaveLength(5);
     // 12-hour window is still warming up across only 5 hours.
-    expect(apr.at(-1)?.["12"]).toBeNull();
+    expect(computeAprSeries(series, 12).at(-1)).toBeNull();
     // 1-hour window at the last point sees the observed $12: 12/8760 × 8760 × 100.
-    expect(apr.at(-1)?.["1"]).toBe(1200);
+    expect(computeAprSeries(series, 1).at(-1)).toBe(1200);
     // The imputed hour before it earned nothing at all.
-    expect(apr.at(-2)?.["1"]).toBe(0);
+    expect(computeAprSeries(series, 1).at(-2)).toBe(0);
   });
 
   it("imputed and observed points agree on the fee rate", () => {
@@ -171,15 +169,11 @@ describe("computeAprSeries", () => {
     const badFees = series.map((p, i) => (i === 1 ? { ...p, feesUsd: "NaN" } : p));
     const badLiquidity = series.map((p, i) => (i === 1 ? { ...p, reserveUsd: "NaN" } : p));
 
-    expect(() => computeAprSeries(badFees)).toThrow(/non-finite/);
-    expect(() => computeAprSeries(badLiquidity)).toThrow(/non-finite/);
+    expect(() => computeAprSeries(badFees, 1)).toThrow(/non-finite/);
+    expect(() => computeAprSeries(badLiquidity, 1)).toThrow(/non-finite/);
   });
 
-  it("returns every window on every point", () => {
-    const apr = computeAprSeries(flat(3, "1", "8760"));
-
-    for (const point of apr) {
-      expect(Object.keys(point).sort()).toEqual(["1", "12", "24"]);
-    }
+  it("returns one value per point, for the window it was asked for", () => {
+    expect(computeAprSeries(flat(3, "1", "8760"), 1)).toEqual([100, 100, 100]);
   });
 });

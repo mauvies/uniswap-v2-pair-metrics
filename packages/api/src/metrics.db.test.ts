@@ -1,4 +1,4 @@
-import type { PairMetrics } from "@uniswap-v2-pair-metrics/shared";
+import type { AprWindow, PairMetrics } from "@uniswap-v2-pair-metrics/shared";
 import { HOUR_SECONDS } from "@uniswap-v2-pair-metrics/shared";
 import { pairHourMetrics } from "@uniswap-v2-pair-metrics/shared/schema";
 import {
@@ -38,7 +38,7 @@ function span(count: number, startOffset = 0): number[] {
 
 async function get(
   pair: string,
-  range: { from?: number; to?: number } = {},
+  range: { from?: number; to?: number; window?: AprWindow } = {},
 ): Promise<{ statusCode: number; body: PairMetrics }> {
   const search = new URLSearchParams();
   if (range.from !== undefined) {
@@ -46,6 +46,9 @@ async function get(
   }
   if (range.to !== undefined) {
     search.set("to", iso(range.to));
+  }
+  if (range.window !== undefined) {
+    search.set("window", String(range.window));
   }
 
   const query = search.size === 0 ? "" : `?${search}`;
@@ -106,8 +109,8 @@ describe("GET /pairs/:address/metrics", () => {
     // The 23 hours before `from` were read but are not part of the answer.
     expect(body.points).toHaveLength(6);
     expect(body.points[0]?.hourStartUnix).toBe(at(24));
-    // And they did their job: the first point's widest window is full.
-    expect(body.points[0]?.apr["24"]).not.toBe(null);
+    // And they did their job: the first point's window is full.
+    expect(body.points[0]?.apr).not.toBe(null);
   });
 
   it("lookback truncated at start of history → nulls", async () => {
@@ -116,9 +119,16 @@ describe("GET /pairs/:address/metrics", () => {
     const { body } = await get(ACTIVE, { from: at(0), to: at(47) });
 
     expect(body.points).toHaveLength(48);
-    expect(body.points.filter((point) => point.apr["1"] === null)).toHaveLength(0);
-    expect(body.points.filter((point) => point.apr["12"] === null)).toHaveLength(11);
-    expect(body.points.filter((point) => point.apr["24"] === null)).toHaveLength(23);
+    expect(body.points.filter((point) => point.apr === null)).toHaveLength(23);
+
+    for (const [window, warmUp] of [
+      [1, 0],
+      [12, 11],
+    ] as const) {
+      const narrower = await get(ACTIVE, { from: at(0), to: at(47), window });
+
+      expect(narrower.body.points.filter((point) => point.apr === null)).toHaveLength(warmUp);
+    }
   });
 
   it("a gap spanning the lookback still fills the window", async () => {
@@ -132,7 +142,7 @@ describe("GET /pairs/:address/metrics", () => {
     expect(body.points).toHaveLength(6);
     expect(body.points[0]?.hourStartUnix).toBe(at(40));
     expect(body.points[0]?.imputed).toBe(false);
-    expect(body.points[0]?.apr["24"]).not.toBe(null);
+    expect(body.points[0]?.apr).not.toBe(null);
   });
 
   it("omitted bounds resolve to the stored extent", async () => {
@@ -210,6 +220,65 @@ describe("GET /pairs/:address/metrics", () => {
 
       expect(statusCode).toBe(200);
       expect(body.points).toEqual([]);
+    });
+
+    it("rejects a window that is not one of the three with 400", async () => {
+      for (const window of ["6", "0", "-1", "twelve", ""]) {
+        const response = await app.inject({
+          method: "GET",
+          url: `/pairs/${ACTIVE}/metrics?window=${window}`,
+        });
+
+        expect(response.statusCode).toBe(400);
+      }
+    });
+  });
+
+  describe("window parameter", () => {
+    it("serves the window asked for, and echoes it", async () => {
+      await seed(ACTIVE, span(30));
+
+      const { body } = await get(ACTIVE, { from: at(24), to: at(29), window: 1 });
+
+      expect(body.aprWindowHours).toBe(1);
+      // Every point is complete: a 1-hour window has no warm-up at all.
+      expect(body.points.every((point) => point.apr !== null)).toBe(true);
+    });
+
+    it("defaults to 24 when the parameter is absent", async () => {
+      await seed(ACTIVE, span(30));
+
+      const { body } = await get(ACTIVE, { from: at(24), to: at(29) });
+
+      expect(body.aprWindowHours).toBe(24);
+      expect(body).toEqual(
+        await get(ACTIVE, { from: at(24), to: at(29), window: 24 }).then((r) => r.body),
+      );
+    });
+
+    it("a narrower window needs less history behind it", async () => {
+      // History starts at hour 12, so the first requested point has 12 hours behind it:
+      // enough for a 12-hour window, not for a 24-hour one.
+      await seed(ACTIVE, span(18, 12));
+
+      const widest = await get(ACTIVE, { from: at(24), to: at(29), window: 24 });
+      const narrower = await get(ACTIVE, { from: at(24), to: at(29), window: 12 });
+
+      expect(widest.body.points).toHaveLength(6);
+      expect(narrower.body.points).toHaveLength(6);
+      expect(widest.body.points[0]?.apr).toBe(null);
+      expect(narrower.body.points[0]?.apr).not.toBe(null);
+    });
+
+    it("carries the window through an empty answer", async () => {
+      const { body } = await get(DEAD, { window: 12 });
+
+      expect(body).toEqual({
+        pair: body.pair,
+        aprWindowHours: 12,
+        range: null,
+        points: [],
+      });
     });
   });
 
