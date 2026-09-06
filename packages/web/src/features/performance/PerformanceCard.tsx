@@ -26,7 +26,7 @@ export function PerformanceCard() {
   const pair = findPair(address) ?? DEFAULT_PAIR;
   const from = rangeFrom(range, Math.floor(Date.now() / 1000));
 
-  const { points, isPending, isError } = usePairMetrics(pair.address, from);
+  const { points, isPending, isError } = usePairMetrics(pair.address, from, aprWindow);
 
   return (
     <section>
@@ -76,7 +76,6 @@ export function PerformanceCard() {
               points={points}
               isPending={isPending}
               isError={isError}
-              aprWindow={aprWindow}
               bounded={from !== undefined}
             />
           </div>

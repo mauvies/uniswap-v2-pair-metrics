@@ -1,5 +1,5 @@
-import type { PairMetrics } from "@uniswap-v2-pair-metrics/shared";
-import { findPair } from "@uniswap-v2-pair-metrics/shared";
+import type { AprWindow, PairMetrics } from "@uniswap-v2-pair-metrics/shared";
+import { APR_WINDOWS, findPair } from "@uniswap-v2-pair-metrics/shared";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { type Db, storedExtent, storedSeries } from "./db/index.ts";
@@ -12,9 +12,19 @@ const params = z.object({
 /** A date alone is midnight UTC, which is what a date picker sends (§2.5). */
 const instant = z.union([z.iso.datetime({ offset: true }), z.iso.date()]);
 
+/** Absent means the widest window, which is what the chart opens on (§6.2). */
+const DEFAULT_WINDOW: AprWindow = 24;
+
+const isAprWindow = (hours: number): hours is AprWindow =>
+  (APR_WINDOWS as readonly number[]).includes(hours);
+
 const query = z.object({
   from: instant.optional(),
   to: instant.optional(),
+  window: z.coerce
+    .number()
+    .refine(isAprWindow, `expected one of ${APR_WINDOWS.join(", ")}`)
+    .optional(),
 });
 
 /**
@@ -46,7 +56,8 @@ export function registerMetrics(app: FastifyInstance, db: Db): void {
       throw httpError(404, `${address} is not one of the configured pairs`);
     }
 
-    const { from, to } = parse(query, request.query);
+    const { from, to, window: requested } = parse(query, request.query);
+    const aprWindowHours = requested ?? DEFAULT_WINDOW;
     const fromHour = from === undefined ? undefined : floorToHour(from);
     const toHour = to === undefined ? undefined : floorToHour(to);
 
@@ -59,21 +70,26 @@ export function registerMetrics(app: FastifyInstance, db: Db): void {
     const extent = await reachDatabase(storedExtent(db, pair.address));
 
     if (extent === null) {
-      return { pair, range: null, points: [] };
+      return { pair, aprWindowHours, range: null, points: [] };
     }
 
     const resolved = resolveHours(extent, fromHour, toHour);
 
     if (resolved === null) {
-      return { pair, range: null, points: [] };
+      return { pair, aprWindowHours, range: null, points: [] };
     }
 
     const rows = await reachDatabase(
-      storedSeries(db, pair.address, lookbackStart(resolved.fromHour), resolved.toHour),
+      storedSeries(
+        db,
+        pair.address,
+        lookbackStart(resolved.fromHour, aprWindowHours),
+        resolved.toHour,
+      ),
     );
-    const points = buildPoints(rows, resolved.fromHour);
+    const points = buildPoints(rows, resolved.fromHour, aprWindowHours);
 
-    return { pair, range: rangeOf(points), points };
+    return { pair, aprWindowHours, range: rangeOf(points), points };
   });
 }
 

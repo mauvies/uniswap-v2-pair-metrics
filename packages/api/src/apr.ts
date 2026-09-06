@@ -1,27 +1,22 @@
-import type { AprByWindow, AprWindow } from "@uniswap-v2-pair-metrics/shared";
-import { APR_WINDOWS, HOURS_PER_YEAR } from "@uniswap-v2-pair-metrics/shared";
+import type { AprWindow } from "@uniswap-v2-pair-metrics/shared";
+import { HOURS_PER_YEAR } from "@uniswap-v2-pair-metrics/shared";
 import type { ReconstructedHour } from "./reconstruct.ts";
 
 const OUTPUT_DECIMALS = 3;
 
 /**
- * Computes the APR for all three moving-average windows at every point in a
+ * Computes the APR for one moving-average window at every point in a
  * reconstructed series (§2.2, §6.2).
  *
  * Requires a contiguous series (guaranteed by `reconstructSeries`). Gaps cause
  * an N-entry window to span more than N hours, producing incorrect values
  * rather than throwing an error.
  */
-export function computeAprSeries(series: readonly ReconstructedHour[]): AprByWindow[] {
-  return series.map((_, index) => {
-    const apr = {} as AprByWindow;
-
-    for (const window of APR_WINDOWS) {
-      apr[window] = aprAt(series, index, window);
-    }
-
-    return apr;
-  });
+export function computeAprSeries(
+  series: readonly ReconstructedHour[],
+  window: AprWindow,
+): (number | null)[] {
+  return series.map((_, index) => aprAt(series, index, window));
 }
 
 function aprAt(

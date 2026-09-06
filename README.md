@@ -93,11 +93,13 @@ to stderr.
 
 ## API
 
-`GET /pairs/:address/metrics?from=<ISO-8601>&to=<ISO-8601>` returns every stored metric for
-one pair over a range, plus APR over 1, 12 and 24 hours at each point. Both bounds are
-optional and inclusive, floored to their hour; omit them to get everything stored. Hours the
-subgraph never wrote come back reconstructed and flagged `imputed: true` (`docs/DECISIONS.md`
-§2.3), and `range` echoes the interval actually served rather than the one asked for.
+`GET /pairs/:address/metrics?from=<ISO-8601>&to=<ISO-8601>&window=<1|12|24>` returns every
+stored metric for one pair over a range, plus the APR for one moving-average window at each
+point. All three parameters are optional: the bounds are inclusive and floored to their hour,
+omit them to get everything stored, and `window` defaults to 24. Hours the subgraph never
+wrote come back reconstructed and flagged `imputed: true` (`docs/DECISIONS.md` §2.3); `range`
+echoes the interval actually served rather than the one asked for, and `aprWindowHours` the
+window served.
 
 ```sh
 curl -s "http://127.0.0.1:3000/pairs/0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc/metrics" | jq

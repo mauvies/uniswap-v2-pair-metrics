@@ -47,6 +47,7 @@ describe("PerformanceCard", () => {
     renderCard(() =>
       jsonResponse({
         pair: { address: "0x0", token0Symbol: "USDC", token1Symbol: "WETH" },
+        aprWindowHours: 24,
         range: null,
         points: [],
       }),
@@ -60,6 +61,7 @@ describe("PerformanceCard", () => {
     renderCard(() =>
       jsonResponse({
         pair: { address: "0x0", token0Symbol: "USDC", token1Symbol: "WETH" },
+        aprWindowHours: 24,
         range: null,
         points: [],
       }),
@@ -78,6 +80,7 @@ describe("PerformanceCard", () => {
     renderCard(() =>
       jsonResponse({
         pair: { address: "0x0", token0Symbol: "USDC", token1Symbol: "WETH" },
+        aprWindowHours: 24,
         range: { fromHourUnix: 1_786_525_200, toHourUnix: 1_786_528_800 },
         points: [1_786_525_200, 1_786_528_800].map((hourStartUnix) => ({
           hourStartUnix,
@@ -89,7 +92,7 @@ describe("PerformanceCard", () => {
           volumeUSD: "0",
           feesUSD: "0",
           imputed: false,
-          apr: { "1": 0, "12": null, "24": null },
+          apr: null,
         })),
       }),
     );
